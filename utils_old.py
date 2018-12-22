@@ -255,10 +255,10 @@ class save_batch(object):
                 draw.text((20, current_line), review_selected[(width * j):(width * (j + 1))], 'red')
                 
         draw = ImageDraw.Draw(img)            
-        img.save(str(self.filename))
+        img.save(self.filename)
 
         ## write the selected chunks only
-        textfile = open(str(self.filename.with_suffix('.txt')), 'w')
+        textfile = open(self.filename.with_suffix('.txt'), 'w')
         for i in range(self.batch.size(0)):
             
             label_review = "POS" if self.label[i].item() == 1 else "NEG"
@@ -298,7 +298,7 @@ class save_batch(object):
             plt.imshow(img2, cmap = 'gray')
 
         fig.subplots_adjust(wspace = 0.05, hspace = 0.35)      
-        fig.savefig(str(self.filename))
+        fig.savefig(self.filename)
 
 def idxtoreview(review, word_idx, index = None):
     
