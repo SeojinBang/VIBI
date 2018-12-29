@@ -35,7 +35,8 @@ class Solver(object):
         self.global_iter = 0
         self.global_epoch = 0
         self.env_name = os.path.splitext(args.checkpoint_name)[0] if args.env_name is 'main' else args.env_name
-
+        self.start = time.time()
+        
         # Dataset
         self.args.root = os.path.join(self.args.dataset, self.args.data_dir)
         self.args.load_pred = True
@@ -103,7 +104,8 @@ class Solver(object):
         # Black box
         self.args.model_dir = args.dataset + '/models'
         model_name = Path(self.args.model_dir).joinpath(self.args.model_name)
-        self.black_box.load_state_dict(torch.load(model_name, map_location='cpu'))
+        #self.black_box.load_state_dict(torch.load(model_name, map_location='cpu'))
+        self.black_box.load_state_dict(torch.load(str(model_name), map_location='cpu'))
     #%%
         if self.cuda:
             self.black_box.cuda()
@@ -323,8 +325,8 @@ class Solver(object):
                 pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
                 #pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
                 accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
-                print('train zeropadded', pred_zeropadded)
-                print('train true', y_class)
+                #seojin print('train zeropadded', pred_zeropadded)
+                #seojin print('train true', y_class)
            
                 precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
                 precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
@@ -442,7 +444,7 @@ class Solver(object):
                     #print("prediction", prediction)
                     #tab = pd.crosstab(y_class, prediction)
                     #print(tab, end = "\n")
-                    print('epoch {}'.format(self.global_epoch), end = "\n")
+                    print('epoch {} Time since {}'.format(self.global_epoch, timeSince(self.start)), end = "\n")
                     print('global iter {}'.format(self.global_iter), end = "\n")
                     print('i:{} IZY:{:.2f} IZX:{:.2f}'
                             .format(idx+1, izy_bound.item(), izx_bound.item()), end = '\n')
@@ -1382,7 +1384,8 @@ class Solver(object):
                 }
 
         file_path = self.checkpoint_dir.joinpath(filename)
-        torch.save(states, file_path.open('wb+'))
+        #torch.save(states, file_path.open('wb+'))
+        torch.save(states, open(str(file_path), 'wb+'))
 
         print("=> saved checkpoint '{}' (iter {})".format(file_path, self.global_iter))
 
@@ -1391,7 +1394,8 @@ class Solver(object):
         file_path = self.checkpoint_dir.joinpath(filename)
         if file_path.is_file():
             print("=> loading checkpoint '{}'".format(file_path))
-            checkpoint = torch.load(file_path.open('rb'))
+            #checkpoint = torch.load(file_path.open('rb'))
+            checkpoint = torch.load(open(str(file_path), 'rb'))
             self.global_epoch = checkpoint['epoch']
             self.global_iter = checkpoint['iter']
             self.history = checkpoint['history']

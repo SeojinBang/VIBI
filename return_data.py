@@ -44,23 +44,27 @@ def return_data(args):
         test_data = dset(**test_kwargs)
 
         # data loader
+        num_workers = 0
         train_loader = DataLoader(train_data,
                                    batch_size = batch_size,
                                    shuffle = True,
-                                   num_workers = 1,
-                                   drop_last = True)
+                                   num_workers = num_workers,
+                                   drop_last = True,
+                                   pin_memory = True)
 
         valid_loader = DataLoader(valid_data,
                                    batch_size = batch_size,
                                    shuffle = False,
-                                   num_workers = 1,
-                                   drop_last = False)
+                                   num_workers = num_workers,
+                                   drop_last = False,
+                                   pin_memory = True)
         
         test_loader = DataLoader(test_data,
                                     batch_size = batch_size,
                                     shuffle = False,
-                                    num_workers = 1,
-                                    drop_last = False)
+                                    num_workers = num_workers,
+                                    drop_last = False,
+                                    pin_memory = True)
     
         data_loader['x_type'] = torch.cuda.FloatTensor if args.cuda else torch.FloatTensor
         data_loader['y_type'] = torch.cuda.LongTensor if args.cuda else torch.LongTensor
