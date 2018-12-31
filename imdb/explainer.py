@@ -160,7 +160,7 @@ class Explainer(nn.Module):
             self.LSTM_word = nn.LSTM(input_size = self.args.embedding_dim, hidden_size = 1,
                     num_layers = 1, batch_first = True, bidirectional = False)
 
-            self.model_type = 'lstm-light'
+            self.approximater_type = 'lstm-light'
             self.encoder_word = self.LSTM_word
             self.encoder_sent = nn.Linear(self.max_num_sents * self.max_num_words, 2)
             
@@ -307,7 +307,7 @@ class Explainer(nn.Module):
                     nn.MaxPool1d(kernel_size = self.chunk_size, stride = 1, padding = 0)
                     )(Z_hat)
             Z_hat = Z_hat.view(Z_hat.size(0), -1, self.max_num_sents, self.max_num_words).unsqueeze(-1).expand(torch.Size(newsize))
-            
+
         embeded_words = torch.mul(embeded_words.unsqueeze(1).expand(torch.Size(newsize)), Z_hat)
         
         if self.approximater_type in ['rnn', 'RNN', 'lstm', 'LSTM', 'gru', 'GRU']:
@@ -329,9 +329,9 @@ class Explainer(nn.Module):
                 pred = pred.view(-1, num_sample, pred.size(-1))
                 pred = pred.mean(1)
 
-        elif self.approximater_type in ['lstm-light']:
+        elif self.approximater_type in ['lstm-light', 'LSTM-light', 'LSTM-Light', 'LSTM-LIGHT']:
             
-            embeded_words = embeded_words.view(-1, self.max_num_words, self.embedding_dim, 1).squeeze(-1)
+            embeded_words = embeded_words.view(-1, self.max_num_sents * self.max_num_words, self.embedding_dim, 1).squeeze(-1)
             embeded_words = self.encoder_word(embeded_words)[0]
             encoded_review = self.encoder_sent(embeded_words.contiguous().view(embeded_words.size(0), -1, 1).squeeze(-1))
             pred = F.log_softmax(encoded_review, dim = -1)
@@ -342,15 +342,16 @@ class Explainer(nn.Module):
                 pred = pred.mean(1)
                 
         elif self.approximater_type in ['cnn', 'CNN']:
-            
-            encoded_sent = self.encoder_word(embeded_words.view(-1, self.max_num_words, self.embedding_dim, 1).squeeze(-1))
-            encoded_sent = encoded_sent.view(-1, self.max_num_sents, self.num_cnn_hidden_size) # batch * 15 * 100
 
+            #print(embeded_words.size())
+            encoded_sent = self.encoder_word(embeded_words.view(-1, 1, self.max_num_words * self.embedding_dim, 1).squeeze(-1))
+            encoded_sent = encoded_sent.view(-1, self.max_num_sents, self.num_cnn_hidden_size) # batch * 15 * 100
+        
             ## feature selection
             if num_sample > 1:
                 
-                encoded_sent = encoded_sent.unsqueeze(1)
-                encoded_sent = torch.mul(encoded_sent.expand(encoded_sent.size(0), num_sample, encoded_sent.size(-2), encoded_sent.size(-1)), Z_hat.unsqueeze(-1))
+                #encoded_sent = encoded_sent.unsqueeze(1)
+                #encoded_sent = torch.mul(encoded_sent.expand(encoded_sent.size(0), num_sample, encoded_sent.size(-2), encoded_sent.size(-1)), Z_hat.unsqueeze(-1))
                 ## decoder
                 encoded_review = torch.mean(encoded_sent, -2) # [10, n, 250]
                 pred = self.encoder_sent(encoded_review.view(-1,encoded_review.size(-1)))
@@ -358,8 +359,10 @@ class Explainer(nn.Module):
                 pred = pred.mean(1) # shoudl be [10, n, 2]#?check whether it has differnet value...
                 
             elif num_sample == 1:
+
+                #print(encoded_sent.size(), Z_hat.size())
                 
-                encoded_sent = torch.mul(encoded_sent, Z_hat.unsqueeze(-1)) # should be [10, 15, 1] * [10, 15, 250] -> [10, 15, 250]  
+                #encoded_sent = torch.mul(encoded_sent, Z_hat.unsqueeze(-1)) # should be [10, 15, 1] * [10, 15, 250] -> [10, 15, 250]  
                 ## decoder
                 encoded_review = torch.mean(encoded_sent, -2) # batch * 100
                 pred = self.encoder_sent(encoded_review) # shoudl be [batch, 2]
@@ -396,6 +399,7 @@ class Explainer(nn.Module):
 
         p_i = self.explainer(x) # probability of each element to be selected [barch-size, d]
         Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau, k = self.K, num_sample = num_sample) # torch.Size([batch-size, num-samples for multishot prediction, d]), d-dimentional random vector to approximate k-hot random explainer Z during training.
+        #print(x.size(), Z_hat.size(), num_sample)
         logit = self.approximater(x, Z_hat, num_sample)
         logit_fixed = self.approximater(x, Z_hat_fixed, num_sample = 1)
 
