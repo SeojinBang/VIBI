@@ -14,10 +14,20 @@ python 3.6.4
 pytorch 0.3.1.post2
 tensorboardX(optional)
 tensorflow(optional)
+conda
 ```
 <br>
 
 ### Usage
+Download and install the environment from Cloud.
+```
+conda env create SeojinBang/py36
+source activate py36
+```
+
+See main.py for possible arguments.
+To learn vibi on MNIST:
+
 1. train
 ```
 python main.py --mode train --beta 1e-3 --tensorboard True --env_name [NAME]
