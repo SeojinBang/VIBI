@@ -14,7 +14,7 @@ from sklearn.utils import check_random_state
 
 
 #%%
-class LimeBase(object):
+class LimeBaseModified(object):
     """Class for learning a locally linear sparse model from perturbed data"""
     def __init__(self,
                  kernel_fn,
@@ -166,23 +166,23 @@ class LimeBase(object):
                                                    labels_column,
                                                    weights,
                                                    num_features,
-                                                   feature_selection, model_regressor)
+                                                   feature_selection, 
+                                                   model_regressor)
             model_regressor = Ridge(alpha=1, fit_intercept=True,
                                     random_state=self.random_state)
         else:
-            labels_column = neighborhood_labels
+            labels_column = neighborhood_labels.argmax(axis = -1)
             used_features = self.feature_selection(neighborhood_data,
                                                    labels_column,
                                                    weights,
                                                    num_features,
-                                                   feature_selection, model_regressor)    
+                                                   feature_selection, 
+                                                   model_regressor)    
             
         easy_model = model_regressor
         easy_model.fit(neighborhood_data[:, used_features], labels_column, sample_weight=weights)
         
-        prediction_score = easy_model.score(
-            neighborhood_data[:, used_features],
-            labels_column, sample_weight=weights)
+        prediction_score = easy_model.score(neighborhood_data[:, used_features], labels_column, sample_weight=weights)
 
         local_pred = easy_model.predict(neighborhood_data[0, used_features].reshape(1, -1))
 
@@ -209,21 +209,21 @@ if kernel is None:
 
 kernel_fn = partial(kernel, kernel_width=kernel_width)
         
+neighborhood_data = data
+neighborhood_labels = labels
+#model_regressor = None
+feature_selection = 'auto'
 self = LimeBase(kernel_fn, verbose, random_state=None)
+#self = lime_base.LimeBase(kernel_fn, verbose, random_state=None)
 #self.base.explain_instance_with_data(
 #                data, labels, distances, label, num_features,
 #                model_regressor=model_regressor,
 #                feature_selection=self.feature_selection)
 
-neighborhood_data = data
-neighborhood_labels = labels
+
 #distances = distances
 #label = label
 #num_features = num_features
-model_regressor = None
-feature_selection = 'auto'
-#%%
-
 
 #%%
 
