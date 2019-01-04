@@ -329,7 +329,7 @@ class Explainer(nn.Module):
                 pred = pred.view(-1, num_sample, pred.size(-1))
                 pred = pred.mean(1)
 
-        elif self.approximater_type in ['lstm-light']:
+        elif self.approximater_type in ['lstm-light', 'lstm-light-onedirect']:
             
             embeded_words = embeded_words.view(-1, self.max_num_words, self.embedding_dim, 1).squeeze(-1)
             embeded_words = self.encoder_word(embeded_words)[0]
