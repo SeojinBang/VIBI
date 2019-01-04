@@ -59,7 +59,7 @@ class Segmentation(object):
                                      is_cuda = self.is_cuda).output.squeeze(0) 
             seg.view(1, -1)[:,idx_all] = cuda(torch.tensor(idx, dtype = torch.float), self.is_cuda)
         
-        seg = seg.detach().numpy().astype(int)
+        seg = seg.detach().cpu().numpy().astype(int)
         
         return seg
         

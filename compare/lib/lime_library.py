@@ -9,21 +9,28 @@ Created on Sat Nov  3 05:20:12 2018
 """
 Functions for explaining classifiers that use Image data.
 """
+#from __future__ import print_function
 import copy
 import torch
+from torch.nn import functional as F
 from functools import partial
+import sys
+sys.path.append('../')
+from utils import index_transfer, cuda
 
 import numpy as np
 import sklearn
 import sklearn.preprocessing
+from sklearn.linear_model import Ridge, lars_path, LogisticRegression
 from sklearn.utils import check_random_state
 from skimage.color import gray2rgb
 
-from lime import lime_base
+#from lime import lime_base
 from lime.wrappers.scikit_image import SegmentationAlgorithm
+from sklearn.linear_model import Ridge, lars_path, LogisticRegression
+#%%
 
-
-class ImageExplanation(object):
+class ImageExplanationModified(object):
     def __init__(self, image, segments):
         """Init function.
         Args:
@@ -86,7 +93,7 @@ class ImageExplanation(object):
             return temp, mask
 
 #%%
-class LimeImageExplainer(object):
+class LimeImageExplainerModified(object):
     """Explains predictions on Image (i.e. matrix) data.
     For numerical features, perturb them by sampling from a Normal(0,1) and
     doing the inverse operation of mean-centering and scaling, according to the
@@ -96,7 +103,7 @@ class LimeImageExplainer(object):
     explained."""
 
     def __init__(self, kernel_width=.25, kernel=None, verbose=False,
-                 feature_selection='auto', random_state=None):
+                 feature_selection='auto', random_state=None, is_cuda = False):
         """Init function.
         Args:
             kernel_width: kernel width for the exponential kernel.
@@ -123,9 +130,10 @@ class LimeImageExplainer(object):
 
         self.random_state = check_random_state(random_state)
         self.feature_selection = feature_selection
-        self.base = lime_base.LimeBase(kernel_fn, verbose, random_state=self.random_state)
+        self.base = LimeBaseModified(kernel_fn, verbose, random_state=self.random_state)
+        self.is_cuda = is_cuda
 
-    def explain_instance(self, image, classifier_fn, labels=(1,),
+    def explain_instance(self, image, filter_size, classifier_fn, labels=(1,),
                          hide_color=0,
                          top_labels=5, num_features=100000, num_samples=1000,
                          batch_size=10,
@@ -164,8 +172,8 @@ class LimeImageExplainer(object):
         Returns:
             An Explanation object (see explanation.py) with the corresponding
             explanations.
+           
         """
-            
         if random_seed is None:
             random_seed = self.random_state.randint(0, high=1000)
 
@@ -178,11 +186,23 @@ class LimeImageExplainer(object):
             
         except ValueError as e:
             raise e
+        
+        chunked_image = copy.deepcopy(image)
+        chunked_image = chunked_image.squeeze(0)
+        chunked_image = chunked_image.cpu().numpy()
+        if filter_size[0] * filter_size[1] > 1:
+            #image = F.avg_pool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
+            #image = F.max_unpool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
 
-        fudged_image = image.squeeze(0)
-        fudged_image = fudged_image.numpy()
+            for x in np.unique(segments):
+                chunked_image[segments == x] = np.mean(chunked_image[segments == x])
+            #chunked_image = torch.Tensor(chunked_image).unsqueeze(0)
+            
+        fudged_image = copy.deepcopy(chunked_image)
+        #fudged_image = fudged_image.squeeze(0)
+        #fudged_image = fudged_image.numpy()
         fudged_image[:] = hide_color
-
+        
 #        if len(image.shape) == 4: 
 #            image = gray2rgb(image.numpy().astype(int))
 #            
@@ -198,33 +218,47 @@ class LimeImageExplainer(object):
 
         top = labels
 
-        data, labels = self.data_labels(image, fudged_image, segments,
+        data, labels, neighborhood_data = self.data_labels(image, fudged_image, segments,
                                         classifier_fn, num_samples,
                                         batch_size=batch_size)
-
+        if filter_size[0] * filter_size[1] > 1:
+            neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, segments.shape[-2], segments.shape[-1]), kernel_size = filter_size, stride = filter_size, padding = 0)
+            neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
+            
+        #print('here')
+        #print(labels.argmax(axis = 1))
         distances = sklearn.metrics.pairwise_distances(
             data,
             data[0].reshape(1, -1),
             metric=distance_metric
         ).ravel()
 
-        ret_exp = ImageExplanation(image, segments)
-        
+        ret_exp = ImageExplanationModified(chunked_image, segments)
+       
         if top_labels:
             top = np.argsort(labels[0])[-top_labels:]
             ret_exp.top_labels = list(top)
             ret_exp.top_labels.reverse()
-            
-        for label in top:
+         
+        for label in ret_exp.top_labels:
             (ret_exp.intercept[label],
              ret_exp.local_exp[label],
-             ret_exp.score, ret_exp.local_pred) = self.base.explain_instance_with_data(
-                data, labels, distances, label, num_features,
-                model_regressor=model_regressor,
-                feature_selection=self.feature_selection)
+             ret_exp_local_pred_proba, ret_exp_local_pred) = self.base.explain_instance_with_data(
+                neighborhood_data, labels,
+                distances, label, num_features,
+                model_regressor = model_regressor,
+                feature_selection = self.feature_selection)
+                
+            if label == ret_exp.top_labels[0]:
+                ret_exp.local_pred_proba = [ret_exp_local_pred_proba]
+                ret_exp.local_pred = [ret_exp_local_pred]
+            else:
+                #print(ret_exp_score, ret_exp_local_pred)
+                ret_exp.local_pred_proba.append(ret_exp_local_pred_proba)
+                ret_exp.local_pred.append(ret_exp_local_pred)
             
         return ret_exp
-
+    
     def data_labels(self,
                     image,
                     fudged_image,
@@ -249,31 +283,240 @@ class LimeImageExplainer(object):
         """
         n_features = np.unique(segments).shape[0]
         data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
-        labels = []
+        #labels = []
         data[0, :] = 1
         imgs = []
         for row in data:
-            temp = copy.deepcopy(image.squeeze(0)).numpy()
+            temp = copy.deepcopy(image.squeeze(0)).cpu().numpy()
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)
             for z in zeros:
                 mask[segments == z] = True
             temp[mask] = fudged_image[mask]
             imgs.append(temp)
-            if len(imgs) == batch_size:
-                preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()[0]
-                labels.extend(preds)
-                imgs = []
-                
-        if len(imgs) > 0:
-            preds = classifier_fn(torch.Tensor(imgs)).argmax().item()
-            labels.extend([preds])
+            #if len(imgs) == batch_size:
+            #    #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
+            #    preds = classifier_fn(torch.Tensor(imgs)).detach().numpy()
+            #    labels.extend(preds)
+            #    imgs = []
+        
+        #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
+        preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
+        neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
+        #if len(imgs) > 0:
+        #    preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
+        #    labels.extend([preds])
             
-        return data, np.array(labels)
-    
-    
-    
-    
-    
-    
-    
+        return data, np.array(preds), neighborhood_data
+   
+ #%%   
+class LimeBaseModified(object):
+    """Class for learning a locally linear sparse model from perturbed data"""
+    def __init__(self,
+                 kernel_fn,
+                 verbose=False,
+                 random_state=None):
+        """Init function
+        Args:
+            kernel_fn: function that transforms an array of distances into an
+                        array of proximity values (floats).
+            verbose: if true, print local prediction values from linear model.
+            random_state: an integer or numpy.RandomState that will be used to
+                generate random numbers. If None, the random state will be
+                initialized using the internal numpy seed.
+        """
+        self.kernel_fn = kernel_fn
+        self.verbose = verbose
+        self.random_state = check_random_state(random_state)
+
+    @staticmethod
+    def generate_lars_path(weighted_data, weighted_labels):
+        """Generates the lars path for weighted data.
+        Args:
+            weighted_data: data that has been weighted by kernel
+            weighted_label: labels, weighted by kernel
+        Returns:
+            (alphas, coefs), both are arrays corresponding to the
+            regularization parameter and coefficients, respectively
+        """
+        x_vector = weighted_data
+        alphas, _, coefs = lars_path(x_vector,
+                                     weighted_labels,
+                                     method='lasso',
+                                     verbose=False)
+        return alphas, coefs
+
+    def forward_selection(self, data, labels, weights, num_features, model_regressor = None):
+        """Iteratively adds features to the model"""
+        
+        if model_regressor is None:
+            clf = Ridge(alpha=0, fit_intercept=True, random_state=self.random_state)
+        else:
+            clf = model_regressor
+            
+        used_features = []
+        for _ in range(min(num_features, data.shape[1])):
+            max_ = -100000000
+            best = 0
+            for feature in range(data.shape[1]):
+                if feature in used_features:
+                    continue
+                clf.fit(data[:, used_features + [feature]], labels,
+                        sample_weight=weights)
+                score = clf.score(data[:, used_features + [feature]],
+                                  labels,
+                                  sample_weight=weights)
+                if score > max_:
+                    best = feature
+                    max_ = score
+            used_features.append(best)
+        return np.array(used_features)
+
+    def feature_selection(self, data, labels, weights, num_features, method, model_regressor):
+        """Selects features for the model. see explain_instance_with_data to
+           understand the parameters."""
+        if method == 'none':
+            return np.array(range(data.shape[1]))
+        
+        elif method == 'forward_selection':
+            return self.forward_selection(data, labels, weights, num_features, model_regressor)
+        
+        elif method == 'highest_weights':
+            
+            if model_regressor is None:
+                clf = Ridge(alpha=0, fit_intercept=True, random_state=self.random_state)
+            else:
+                clf = model_regressor
+            
+            clf.fit(data, labels, sample_weight=weights)
+            
+            if model_regressor.multi_class in ['multinomial', 'ovr']:
+                feature_weights = sorted(zip(range(data.shape[0]), clf.coef_[0] * data[0]),
+                                         key=lambda x: np.abs(x[1]),
+                                         reverse=True)
+            else:
+                feature_weights = sorted(zip(range(data.shape[0]), clf.coef_ * data[0]),
+                                         key=lambda x: np.abs(x[1]),
+                                         reverse=True)
+                
+            return np.array([x[0] for x in feature_weights[:num_features]])
+        
+        elif method == 'lasso_path':
+            weighted_data = ((data - np.average(data, axis=0, weights=weights))
+                             * np.sqrt(weights[:, np.newaxis]))
+            weighted_labels = ((labels - np.average(labels, weights=weights))
+                               * np.sqrt(weights))
+            nonzero = range(weighted_data.shape[1])
+            _, coefs = self.generate_lars_path(weighted_data,
+                                               weighted_labels)
+            for i in range(len(coefs.T) - 1, 0, -1):
+                nonzero = coefs.T[i].nonzero()[0]
+                if len(nonzero) <= num_features:
+                    break
+            used_features = nonzero
+            return used_features
+        
+        elif method == 'auto':
+            if num_features <= 6:
+                n_method = 'forward_selection'
+            else:
+                n_method = 'highest_weights'
+            return self.feature_selection(data, labels, weights,
+                                          num_features, n_method, model_regressor)
+        
+    def explain_instance_with_data(self,
+                                   neighborhood_data,
+                                   neighborhood_labels,
+                                   distances,
+                                   label,
+                                   num_features,
+                                   feature_selection='auto',
+                                   model_regressor=None):
+        """Takes perturbed data, labels and distances, returns explanation.
+        Args:
+            neighborhood_data: perturbed data, 2d array. first element is
+                               assumed to be the original data point.
+            neighborhood_labels: corresponding perturbed labels. should have as
+                                 many columns as the number of possible labels.
+            distances: distances to original data point.
+            label: label for which we want an explanation
+            num_features: maximum number of features in explanation
+            feature_selection: how to select num_features. options are:
+                'forward_selection': iteratively add features to the model.
+                    This is costly when num_features is high
+                'highest_weights': selects the features that have the highest
+                    product of absolute weight * original data point when
+                    learning with all the features
+                'lasso_path': chooses features based on the lasso
+                    regularization path
+                'none': uses all features, ignores num_features
+                'auto': uses forward_selection if num_features <= 6, and
+                    'highest_weights' otherwise.
+            model_regressor: sklearn regressor to use in explanation.
+                Defaults to Ridge regression if None. Must have
+                model_regressor.coef_ and 'sample_weight' as a parameter
+                to model_regressor.fit()
+        Returns:
+            (intercept, exp, score):
+            intercept is a float.
+            exp is a sorted list of tuples, where each tuple (x,y) corresponds
+            to the feature id (x) and the local weight (y). The list is sorted
+            by decreasing absolute value of y.
+            score is the R^2 value of the returned explanation
+        """
+
+        weights = self.kernel_fn(distances)
+            
+        if model_regressor is None:
+            
+            labels_column = neighborhood_labels[:, label]
+            model_regressor = Ridge(alpha=1, fit_intercept=True, random_state=self.random_state)
+            
+        elif 'LogisticRegression' in str(type(model_regressor)):
+            
+            if model_regressor.multi_class is 'multinomial':
+                #print("Explainer: logistic regression with multinomial dist.")
+                labels_column = neighborhood_labels.argmax(axis = -1)
+                
+            elif model_regressor.multi_class is 'ovr':
+                #print("Explainer: logistic regression with binomial dist.")
+                #labels_column = neighborhood_labels.argmax(axis = -1)
+                labels_column = neighborhood_labels.argmax(axis = -1)
+                labels_column = 1 * (labels_column == label)
+                    
+                if len(np.unique(labels_column)) == 1:
+                    if np.sum(labels_column) == 0:
+                        return 'none', 'none', 0.0, 0
+                    else:
+                        return 'none', 'none', 1.0, 1 
+            else:
+                raise KeyError('unknown model_regressor.multi_class')
+                
+        else:
+            raise KeyError('unknown model_regressor')
+        
+        used_features = self.feature_selection(neighborhood_data,
+                                       labels_column,
+                                       weights,
+                                       num_features,
+                                       feature_selection, model_regressor)  
+                
+        easy_model = model_regressor
+        easy_model.fit(neighborhood_data[:, used_features], labels_column, sample_weight=weights)
+        
+        #prediction_score = easy_model.score(neighborhood_data[:, used_features], labels_column, sample_weight=weights)
+
+        local_pred = easy_model.predict(neighborhood_data[0, used_features].reshape(1, -1))[0]
+        local_pred_proba = easy_model.predict_proba(neighborhood_data[0, used_features].reshape(1, -1))[0][-1]
+        
+        if self.verbose:
+            print('Intercept', easy_model.intercept_)
+            print('Prediction_local', local_pred,)
+            print('Right:', neighborhood_labels[0], label)
+        
+        #print(local_pred_proba)
+        return (easy_model.intercept_,
+                sorted(zip(used_features, easy_model.coef_[0]),
+                       key=lambda x: np.abs(x[1]), reverse=True),
+                local_pred_proba, local_pred)    
+
