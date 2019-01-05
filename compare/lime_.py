@@ -105,7 +105,7 @@ def parse_args():
     parser.add_argument('--model_name', default = 'original.ckpt', type = str, help = 'if train is True, model name to be saved, otherwise model name to be loaded') 
     #parser.add_argument('--chunk_size', default = 1, type = int, help='chunk size. for image, chunk x chunk will be the actual chunk size')
     parser.add_argument('--chunk_size', default = 2, type = int, help='chunk size. for image, chunk x chunk will be the actual chunk size')
-    parser.add_argument('--cuda', default = True, type = str2bool, help = 'enable cuda')
+    parser.add_argument('--cuda', default = False, type = str2bool, help = 'enable cuda')
     parser.add_argument('--out_dir', type=str, default='./result/lime/', help='Result directory path')
     parser.add_argument('--K', type = int, default = -1, help='dimension of encoding Z')
     
@@ -217,6 +217,8 @@ def test(args, model, device, test_loader, k, **kargs):
     f1_weighted_zeropadded = 0
 
     vmi_zeropadded_sum = 0
+    vmi_fidel_sum = 0
+    vmi_fidel_fixed_sum = 0 
     
     correct_approx = 0
     precision_macro_approx = 0
@@ -244,7 +246,7 @@ def test(args, model, device, test_loader, k, **kargs):
 #%% 
     start = time.time()
     for idx, batch in enumerate(test_loader):#(data, target, _, _)
-        
+
         if 'mnist' in args.dataset:
             
             num_labels = 10
@@ -300,10 +302,11 @@ def test(args, model, device, test_loader, k, **kargs):
                                          model_regressor = args.model_regressor,
                                          segmentation_fn = args.segmenter)
                 
-                #approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
-                #approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
-                approx = explanation_all.top_labels[0]
-                approx_fixed = explanation.top_labels[0]
+                approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
+                approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
+                #approx = explanation_all.top_labels[np.argmax(explanation_all.local_pred_proba, axis = -1)]
+                #approx_fixed = explanation.top_labels[np.argmax(explanation.local_pred_proba, axis = -1)]
+                #print(approx, approx_fixed, explanabtion_all.top_labels[0])
                 index = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
                 if args.chunk_size > 1:
                     index = index_transfer(dataset = args.dataset,
@@ -363,10 +366,8 @@ def test(args, model, device, test_loader, k, **kargs):
                                          model_regressor = args.model_regressor,
                                          segmentation_fn = args.segmenter)
                 
-                #approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
-                #approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
-                approx = explanation_all.top_labels[0]
-                approx_fixed = explanation.top_labels[0]
+                approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
+                approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
                 index = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
                 if args.chunk_size > 1:
                     index = index_transfer(dataset = args.dataset,
@@ -429,14 +430,16 @@ def test(args, model, device, test_loader, k, **kargs):
 #                data_selected_all = torch.cat((data_selected_all, data_selected), dim = 0)
 
             if i == 0:
-                approx_all = [approx]
-                approx_fixed_all = [approx_fixed]
+                approx_all = approx
+                approx_fixed_all = approx_fixed
                 index_all = index
             else:
                 #approx_all = torch.cat((approx_all, approx), dim = 0)
                 #approx_fixed_all = torch.cat((approx_fixed_all, approx_fixed), dim = 0)
-                approx_all.append(approx)
-                approx_fixed_all.append(approx_fixed)
+                #approx_all.append(approx)
+                #approx_fixed_all.append(approx_fixed)
+                approx_all = torch.cat((approx_all, approx), dim = 0)
+                approx_fixed_all = torch.cat((approx_fixed_all, approx_fixed), dim = 0)
                 index_all = torch.cat((index_all, index), dim = 0)
 #%%  
         if 'mnist' in args.dataset:
@@ -473,20 +476,23 @@ def test(args, model, device, test_loader, k, **kargs):
         f1_weighted_zeropadded += f1_score(pred, pred_zeropadded, average = 'weighted')
 
         ## Variational Mutual Information            
-        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1,
                                       tensor1 = torch.exp(output_all).type(torch.FloatTensor),
-                                      tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.sum(output_all, dim = -1).unsqueeze(-1).expand(output_zeropadded.size()).type(torch.FloatTensor),
+                                      tensor2 = output_zeropadded.type(torch.FloatTensor) -torch.sum(output_all, dim = -1).unsqueeze(-1).expand(output_zeropadded.size()).type(torch.FloatTensor),
                                       out=None), dim = -1)
         vmi = vmi.sum().item()
         vmi_zeropadded_sum += vmi
           
         ## Approximation Fidelity (prediction performance)
         pred = pred.type(torch.LongTensor)
-        #pred_approx = approx_all.topk(1, dim = -1)[1]
-        pred_approx = torch.Tensor(approx_all).type(torch.LongTensor).unsqueeze(-1)
-        #pred_approx_fixed = approx_fixed_all.topk(1, dim = -1)[1]
-        pred_approx_fixed = torch.Tensor(approx_fixed_all).type(torch.LongTensor).unsqueeze(-1)
-              
+        pred_approx = approx_all.topk(1, dim = -1)[1]
+        #pred_approx = torch.Tensor(approx_all).type(torch.LongTensor).unsqueeze(-1)
+        pred_approx_fixed = approx_fixed_all.topk(1, dim = -1)[1]
+        #pred_approx_fixed = torch.Tensor(approx_fixed_all).type(torch.LongTensor).unsqueeze(-1)
+
+        pred_approx_logit = F.softmax(torch.log(approx_all), dim=1)
+        pred_approx_fixed_logit = F.softmax(torch.log(approx_fixed_all), dim = -1)
+           
         correct_approx += pred_approx.eq(pred).sum().item()
         precision_macro_approx += precision_score(pred, pred_approx, average = 'macro')  
         precision_micro_approx += precision_score(pred, pred_approx, average = 'micro')  
@@ -507,7 +513,17 @@ def test(args, model, device, test_loader, k, **kargs):
         recall_weighted_approx_fixed += recall_score(pred, pred_approx_fixed, average = 'weighted')
         f1_macro_approx_fixed += f1_score(pred, pred_approx_fixed, average = 'macro')
         f1_micro_approx_fixed += f1_score(pred, pred_approx_fixed, average = 'micro')
-        f1_weighted_approx_fixed += f1_score(pred, pred_approx_fixed, average = 'weighted')    
+        f1_weighted_approx_fixed += f1_score(pred, pred_approx_fixed, average = 'weighted')
+
+        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1,
+                                      tensor1 = torch.exp(output_all).type(torch.FloatTensor),
+                                      tensor2 = pred_approx_logit.type(torch.FloatTensor) - torch.logsumexp(output_all, dim= 0).unsqueeze(0).expand(pred_approx_logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_all.size(0)).type(torch.FloatTensor)),
+                                      out=None), dim = -1)
+        vmi_fidel_sum += vmi.sum().item()
+        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1,
+                                      tensor1 = torch.exp(output_all).type(torch.FloatTensor),
+                                      tensor2 = pred_approx_fixed_logit.type(torch.FloatTensor) - torch.logsumexp(output_all, dim = 0).unsqueeze(0).expand(pred_approx_fixed_logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_all.size(0)).type(torch.FloatTensor)), out=None), dim = -1)
+        vmi_fidel_fixed_sum += vmi.sum().item()  
 #%%
         #print("SAVED!!!!")
         if idx in idx_list:
@@ -536,7 +552,6 @@ def test(args, model, device, test_loader, k, **kargs):
         print('[summary] Batch {} Time spent is {}'.format(idx, time.time() - start))                   
 #%%                               
     ## Post-hoc Accuracy (zero-padded accuracy)
-    vmi_zeropadded = vmi_zeropadded_sum/total_num_ind
     accuracy_zeropadded = correct_zeropadded/total_num_ind
     precision_macro_zeropadded = precision_macro_zeropadded/total_num
     precision_micro_zeropadded = precision_micro_zeropadded/total_num
@@ -547,6 +562,11 @@ def test(args, model, device, test_loader, k, **kargs):
     f1_macro_zeropadded = f1_macro_zeropadded/total_num
     f1_micro_zeropadded = f1_micro_zeropadded/total_num
     f1_weighted_zeropadded = f1_weighted_zeropadded/total_num
+
+    ## VMI
+    vmi_zeropadded = vmi_zeropadded_sum/total_num_ind
+    vmi_fidel = vmi_fidel_sum / total_num_ind
+    vmi_fidel_fixed = vmi_fidel_fixed_sum / total_num_ind
     
     ## Approximation Fidelity (prediction performance)
     accuracy_approx = correct_approx/total_num_ind
@@ -578,8 +598,7 @@ def test(args, model, device, test_loader, k, **kargs):
     #print(tab, end = "\n")                
     #print('IZY:{:.2f} IZX:{:.2f}'
     #        .format(izy_bound.item(), izx_bound.item()), end = '\n')
-    print('acc_zeropadded:{:.4f} avg_acc:{:.4f} avg_acc_fixed:{:.4f}'
-            .format(accuracy_zeropadded, accuracy_approx, accuracy_approx_fixed), end = '\n')
+    print('acc_zeropadded:{:.4f} avg_acc:{:.4f} avg_acc_fixed:{:.4f}'.format(accuracy_zeropadded, accuracy_approx, accuracy_approx_fixed), end = '\n')    
     print('precision_macro_zeropadded:{:.4f} precision_macro_approx:{:.4f} precision_macro_approx_fixed:{:.4f}'
             .format(precision_macro_zeropadded, precision_macro_approx, precision_macro_approx_fixed), end = '\n')   
     print('precision_micro_zeropadded:{:.4f} precision_micro_approx:{:.4f} precision_micro_approx_fixed:{:.4f}'
@@ -592,8 +611,9 @@ def test(args, model, device, test_loader, k, **kargs):
             .format(f1_macro_zeropadded, f1_macro_approx, f1_macro_approx_fixed), end = '\n')   
     print('f1_micro_zeropadded:{:.4f} f1_micro_approx:{:.4f} f1_micro_approx_fixed:{:.4f}'
             .format(f1_micro_zeropadded, f1_micro_approx_fixed, f1_micro_approx_fixed), end = '\n') 
-    print('vmi:{:.4f}'.format(vmi_zeropadded), end = '\n')
+    print('vmi:{:.4f} vmi_fixed:{:.4f} vmi_zeropadded:{:.4f}'.format(vmi_fidel, vmi_fidel_fixed, vmi_zeropadded), end = '\n')
     print()
+    print("[END]")
     
 #%%
 #        if outfile:

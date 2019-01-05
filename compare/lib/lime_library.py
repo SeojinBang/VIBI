@@ -218,9 +218,18 @@ class LimeImageExplainerModified(object):
 
         top = labels
 
-        data, labels, neighborhood_data = self.data_labels(image, fudged_image, segments,
+        #print(torch.Tensor(chunked_image).unsqueeze(0).size())
+        data, labels, neighborhood_data = self.data_labels(#image,
+            torch.Tensor(chunked_image).unsqueeze(0),
+                                        fudged_image, segments,
                                         classifier_fn, num_samples,
                                         batch_size=batch_size)
+        #print('fake labels')
+        #print('fake labels', np.argmax(labels[0], -1))
+        #unique, counts = np.unique(np.argmax(labels, -1), return_counts = True)
+        #print(dict(zip(unique, counts)))
+#        print(np.argmax(labels, -1))
+
         if filter_size[0] * filter_size[1] > 1:
             neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, segments.shape[-2], segments.shape[-1]), kernel_size = filter_size, stride = filter_size, padding = 0)
             neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
@@ -256,7 +265,9 @@ class LimeImageExplainerModified(object):
                 #print(ret_exp_score, ret_exp_local_pred)
                 ret_exp.local_pred_proba.append(ret_exp_local_pred_proba)
                 ret_exp.local_pred.append(ret_exp_local_pred)
-            
+
+        ret_exp.local_pred_proba = np.array(ret_exp.local_pred_proba)[np.argsort(ret_exp.top_labels)]
+
         return ret_exp
     
     def data_labels(self,
