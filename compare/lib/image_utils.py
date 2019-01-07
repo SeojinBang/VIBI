@@ -51,12 +51,13 @@ class Segmentation(object):
         seg = torch.clone(self.img)
         for idx in range(num):
             idx = cuda(torch.tensor([idx], dtype = torch.long), self.is_cuda)
-            idx_all = index_transfer(dataset = 'mnist', 
+            idx_all = index_transfer(dataset = self.dataset, 
                                      idx = idx, 
                                      filter_size = self.filter_size, 
                                      original_ncol = original_ncol, 
                                      original_nrow = original_nrow, 
-                                     is_cuda = self.is_cuda).output.squeeze(0) 
+                                     is_cuda = self.is_cuda).output.squeeze(0)
+            #print(idx_all)
             seg.view(1, -1)[:,idx_all] = cuda(torch.tensor(idx, dtype = torch.float), self.is_cuda)
         
         seg = seg.detach().cpu().numpy().astype(int)
@@ -65,4 +66,8 @@ class Segmentation(object):
         
     def mnist(self, img):    
         
-        return self.default(img) 
+        return self.default(img)
+
+    def imdb(self, img):
+
+        return self.default(img)

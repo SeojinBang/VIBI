@@ -12,6 +12,7 @@ Functions for explaining classifiers that use Image data.
 #from __future__ import print_function
 import copy
 import torch
+import time
 from torch.nn import functional as F
 from functools import partial
 import sys
@@ -103,7 +104,7 @@ class LimeImageExplainerModified(object):
     explained."""
 
     def __init__(self, kernel_width=.25, kernel=None, verbose=False,
-                 feature_selection='auto', random_state=None, is_cuda = False):
+                 feature_selection='auto', random_state=None, is_cuda = False, dataset = None):
         """Init function.
         Args:
             kernel_width: kernel width for the exponential kernel.
@@ -132,12 +133,14 @@ class LimeImageExplainerModified(object):
         self.feature_selection = feature_selection
         self.base = LimeBaseModified(kernel_fn, verbose, random_state=self.random_state)
         self.is_cuda = is_cuda
-
+        self.dataset = dataset
+        
     def explain_instance(self, image, filter_size, classifier_fn, labels=(1,),
                          hide_color=0,
                          top_labels=5, num_features=100000, num_samples=1000,
                          batch_size=10,
                          segmentation_fn=None,
+                         segments=None,
                          distance_metric='cosine',
                          model_regressor=None,
                          random_seed=None):
@@ -177,27 +180,38 @@ class LimeImageExplainerModified(object):
         if random_seed is None:
             random_seed = self.random_state.randint(0, high=1000)
 
-        if segmentation_fn is None:
-            segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
+        if segments is None:
+
+            if segmentation_fn is None:
+                segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
                                                     max_dist=200, ratio=0.2,
                                                     random_seed=random_seed)
-        try:
-            segments = segmentation_fn(image) # (1, 28, 28)
-            
-        except ValueError as e:
-            raise e
-        
+            try:
+                segments = segmentation_fn(image) # (1, 28, 28)
+
+            except ValueError as e:
+                raise e
+
+        #t0 = time.time()
         chunked_image = copy.deepcopy(image)
         chunked_image = chunked_image.squeeze(0)
         chunked_image = chunked_image.cpu().numpy()
+
         if filter_size[0] * filter_size[1] > 1:
             #image = F.avg_pool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
             #image = F.max_unpool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
 
+            print('here')
+            #print(segments)
+            print(segments.shape)# (1, 15, 50)
+            print(chunked_image.shape) # 750 * 100
+            print(np.mean(chunked_image[segments ==1]))
             for x in np.unique(segments):
                 chunked_image[segments == x] = np.mean(chunked_image[segments == x])
             #chunked_image = torch.Tensor(chunked_image).unsqueeze(0)
-            
+        t1 = time.time()
+        #print(t1 - t0)
+           
         fudged_image = copy.deepcopy(chunked_image)
         #fudged_image = fudged_image.squeeze(0)
         #fudged_image = fudged_image.numpy()
@@ -224,18 +238,11 @@ class LimeImageExplainerModified(object):
                                         fudged_image, segments,
                                         classifier_fn, num_samples,
                                         batch_size=batch_size)
-        #print('fake labels')
-        #print('fake labels', np.argmax(labels[0], -1))
-        #unique, counts = np.unique(np.argmax(labels, -1), return_counts = True)
-        #print(dict(zip(unique, counts)))
-#        print(np.argmax(labels, -1))
 
         if filter_size[0] * filter_size[1] > 1:
             neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, segments.shape[-2], segments.shape[-1]), kernel_size = filter_size, stride = filter_size, padding = 0)
             neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
             
-        #print('here')
-        #print(labels.argmax(axis = 1))
         distances = sklearn.metrics.pairwise_distances(
             data,
             data[0].reshape(1, -1),
@@ -248,7 +255,8 @@ class LimeImageExplainerModified(object):
             top = np.argsort(labels[0])[-top_labels:]
             ret_exp.top_labels = list(top)
             ret_exp.top_labels.reverse()
-         
+
+        t3 = time.time()
         for label in ret_exp.top_labels:
             (ret_exp.intercept[label],
              ret_exp.local_exp[label],
@@ -266,6 +274,7 @@ class LimeImageExplainerModified(object):
                 ret_exp.local_pred_proba.append(ret_exp_local_pred_proba)
                 ret_exp.local_pred.append(ret_exp_local_pred)
 
+        t4 = time.time()
         ret_exp.local_pred_proba = np.array(ret_exp.local_pred_proba)[np.argsort(ret_exp.top_labels)]
 
         return ret_exp
@@ -292,11 +301,14 @@ class LimeImageExplainerModified(object):
                 data: dense num_samples * num_superpixels
                 labels: prediction probabilities matrix
         """
+        #print(segments.shape)
+        #print(segments)
         n_features = np.unique(segments).shape[0]
         data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
         #labels = []
         data[0, :] = 1
         imgs = []
+        #t0 = time.time()
         for row in data:
             temp = copy.deepcopy(image.squeeze(0)).cpu().numpy()
             zeros = np.where(row == 0)[0]
@@ -304,7 +316,9 @@ class LimeImageExplainerModified(object):
             for z in zeros:
                 mask[segments == z] = True
             temp[mask] = fudged_image[mask]
+            #print(temp.shape)
             imgs.append(temp)
+            #print(time.time() - t0)
             #if len(imgs) == batch_size:
             #    #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
             #    preds = classifier_fn(torch.Tensor(imgs)).detach().numpy()
@@ -313,7 +327,13 @@ class LimeImageExplainerModified(object):
         
         #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
         preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
-        neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
+        if self.dataset == 'mnist':
+            neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
+        elif self.dataset == 'imdb':
+            neighborhood_data = np.mean(np.stack(imgs, axis=0), axis = -1)
+        else:
+            raise ValueError('unknown dataset')
+
         #if len(imgs) > 0:
         #    preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
         #    labels.extend([preds])
