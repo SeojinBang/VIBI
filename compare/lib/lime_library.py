@@ -144,8 +144,9 @@ class LimeTextExplainerModified(object):
                          hide_color=0,
                          top_labels=5, num_features=100000, num_samples=1000,
                          batch_size=10,
-                         segmentation_fn=None,
-                         segments=None,
+                         #segmentation_fn=None,
+                         #segments=None,
+                         segments_data = None,
                          distance_metric='cosine',
                          model_regressor=None,
                          random_seed=None):
@@ -184,40 +185,39 @@ class LimeTextExplainerModified(object):
         if random_seed is None:
             random_seed = self.random_state.randint(0, high=1000)
 
-        if segments is None:
-
-            if segmentation_fn is None:
-                segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
-                                                    max_dist=200, ratio=0.2,
-                                                    random_seed=random_seed)
-            try:
-                segments = segmentation_fn(text) # (1, 28, 28)
-
-            except ValueError as e:
-                raise e
+        #if segments is None:
         
-        print(text.size())
-        chunked_text = copy.deepcopy(text)
-        chunked_text = chunked_text.squeeze(0)
-        chunked_text = chunked_text.cpu().numpy()
-        print(chunked_text.shape)
+        #    if segmentation_fn is None:
+        #        segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
+        #                                            max_dist=200, ratio=0.2,
+        #                                            random_seed=random_seed)
+        #    try:
+        #        segments = segmentation_fn(text) # (1, 28, 28)
+        #
+        #    except ValueError as e:
+        #        raise e
         
-        if filter_size[0] * filter_size[1] > 1:
-            print(segments.shape)# (1, 15, 50)
-            print(chunked_text.shape) # 750 * 100
-            print(np.mean(chunked_text[segments ==1]))
-            for x in np.unique(segments):
-                chunked_text[segments == x] = np.mean(chunked_text[segments == x])
+        ##print(text.size()) # 1 * 750 * 100
+        #chunked_text = copy.deepcopy(text)
+        #chunked_text = chunked_text.squeeze(0)
+        #chunked_text = chunked_text.cpu().numpy()
+        ##print(chunked_text.shape) # 750 * 100
+        
+        #if filter_size[0] * filter_size[1] > 1:
+            #print(segments.shape)# (1, 15, 50)
+            #print(chunked_text.shape) # 750 * 100
+            #print(np.mean(chunked_text[segments ==1]))
+            #for x in np.unique(segments):
+                #chunked_text[segments == x] = np.mean(chunked_text[segments == x])
    
         fudged_text = copy.deepcopy(chunked_text)
         fudged_text[:] = hide_color
         
         top = labels
-
+        
         #print(torch.Tensor(chunked_text).unsqueeze(0).size())
-        data, labels, neighborhood_data = self.data_labels(#text,
-            torch.Tensor(chunked_text).unsqueeze(0),
-                                        fudged_text, segments,
+        _, labels, neighborhood_data = self.data_labels(text,
+                                        fudged_text, segments_data,
                                         classifier_fn, num_samples,
                                         batch_size=batch_size)
 
@@ -226,8 +226,8 @@ class LimeTextExplainerModified(object):
             neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
             
         distances = sklearn.metrics.pairwise_distances(
-            data,
-            data[0].reshape(1, -1),
+            segments_data,
+            segments_data[0].reshape(1, -1),
             metric=distance_metric
         ).ravel()
 
@@ -264,17 +264,12 @@ class LimeTextExplainerModified(object):
     def data_labels(self,
                     text,
                     fudged_text,
-                    segments,
+                    segments_data,
                     classifier_fn,
                     num_samples,
                     batch_size=10):
-
-        n_features = np.unique(segments).shape[0]
-        data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
-        #labels = []
-        data[0, :] = 1
         imgs = []
-        for row in data:
+        for row in segments_data:
             temp = copy.deepcopy(text.squeeze(0)).cpu().numpy()
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)
@@ -285,13 +280,8 @@ class LimeTextExplainerModified(object):
             imgs.append(temp)
         
         preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
-        if self.dataset == 'mnist':
-            neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
-        elif self.dataset == 'imdb':
-            neighborhood_data = np.mean(np.stack(imgs, axis=0), axis = -1)
-        else:
-            raise ValueError('unknown dataset')
-            
+        neighborhood_data = np.mean(np.stack(imgs, axis=0), axis = -1)
+
         return data, np.array(preds), neighborhood_data
    
 
@@ -497,8 +487,7 @@ class LimeImageExplainerModified(object):
                 data: dense num_samples * num_superpixels
                 labels: prediction probabilities matrix
         """
-        #print(segments.shape)
-        #print(segments)
+
         n_features = np.unique(segments).shape[0]
         data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
         #labels = []
@@ -512,28 +501,11 @@ class LimeImageExplainerModified(object):
             for z in zeros:
                 mask[segments == z] = True
             temp[mask] = fudged_image[mask]
-            #print(temp.shape)
             imgs.append(temp)
-            #print(time.time() - t0)
-            #if len(imgs) == batch_size:
-            #    #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
-            #    preds = classifier_fn(torch.Tensor(imgs)).detach().numpy()
-            #    labels.extend(preds)
-            #    imgs = []
         
-        #preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
         preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
-        if self.dataset == 'mnist':
-            neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
-        elif self.dataset == 'imdb':
-            neighborhood_data = np.mean(np.stack(imgs, axis=0), axis = -1)
-        else:
-            raise ValueError('unknown dataset')
-
-        #if len(imgs) > 0:
-        #    preds = classifier_fn(torch.Tensor(imgs)).argmax(dim = 1).detach().numpy()
-        #    labels.extend([preds])
-            
+        neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
+        
         return data, np.array(preds), neighborhood_data
    
  #%%   
