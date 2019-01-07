@@ -138,7 +138,7 @@ def main():
     
     data_loader = return_data(args)
     test_loader = data_loader['test']
-    
+
     if 'mnist' in args.dataset:
     
         from mnist.original import Net
@@ -152,8 +152,8 @@ def main():
         args.chunk_size = args.chunk_size if args.chunk_size > 0 else 1
         assert np.remainder(args.original_nrow, args.chunk_size) == 0
         args.filter_size = (args.chunk_size, args.chunk_size)
-        args.explainer = LimeImageExplainerModified(verbose = False, feature_selection = 'highest_weights', is_cuda = args.cuda)
-        args.explainer_all = LimeImageExplainerModified(verbose = False, feature_selection = 'none', is_cuda = args.cuda)
+        args.explainer = LimeImageExplainerModified(verbose = False, feature_selection = 'highest_weights', is_cuda = args.cuda, dataset = args.dataset)
+        args.explainer_all = LimeImageExplainerModified(verbose = False, feature_selection = 'none', is_cuda = args.cuda, dataset = args.dataset)
         args.segmenter = Segmentation(dataset = args.dataset, filter_size = args.filter_size, is_cuda = args.cuda)
         args.model_regressor = LogisticRegression(random_state = 0, solver='lbfgs', max_iter = 200, fit_intercept=True, multi_class='ovr')
         
@@ -175,15 +175,15 @@ def main():
         args.chunk_size = args.chunk_size if args.chunk_size > 0 else 1
         if args.chunk_size > args.original_ncol: args.chunk_size = args.original_ncol
         args.filter_size = (1, args.chunk_size)
-        args.explainer = LimeImageExplainerModified(verbose = False)
+        args.explainer = LimeImageExplainerModified(verbose = False, feature_selection = 'highest_weights', is_cuda = args.cuda, dataset = args.dataset)
+        args.explainer_all = LimeImageExplainerModified(verbose = False, feature_selection = 'none', is_cuda = args.cuda, dataset = args.dataset)
         args.segmenter = Segmentation(dataset = args.dataset, filter_size = args.filter_size, is_cuda = args.cuda)
         args.model_regressor = LogisticRegression(random_state = 0, solver='lbfgs', max_iter = 200, fit_intercept=True, multi_class='ovr')
         
     else:
     
         raise UnknownDatasetError()
-            
-#%%
+
     model_name = Path(args.model_dir).joinpath(args.model_name)
     model.load_state_dict(torch.load(model_name, map_location='cpu'))
 #%%
@@ -243,7 +243,8 @@ def test(args, model, device, test_loader, k, **kargs):
     f1_weighted_approx_fixed = 0    
         
     is_cuda = args.cuda
-#%% 
+    j = 0
+#%%
     start = time.time()
     for idx, batch in enumerate(test_loader):#(data, target, _, _)
 
@@ -274,13 +275,24 @@ def test(args, model, device, test_loader, k, **kargs):
         correct += pred.eq(target.view_as(pred)).sum().item()
         total_num += 1
         total_num_ind += data.size(0)
-#%%            
+
+        if idx == 0:
+            if 'mnist' in args.dataset:
+                args.segments = args.segmenter(Variable(data[0:1],
+                                                        requires_grad = False))
+            elif 'imdb'in args.dataset:
+                args.segments = args.segmenter(Variable(data[0:1].view(1, 1, args.max_num_sents, args.max_num_words),
+                                                        requires_grad = False))
+        #%%
+
         for i in range(data.size(0)):
-            
+            #print('i',i)
+
             if 'mnist' in args.dataset:
             
                 ## Calculate Gradient
-                input = Variable(data[i:(i+1)], requires_grad = False) 
+                input = Variable(data[i:(i+1)], requires_grad = False)
+
                 #output = model(input)
                 #output = torch.max(output)
                 explanation = args.explainer.explain_instance(input, 
@@ -291,7 +303,7 @@ def test(args, model, device, test_loader, k, **kargs):
                                          num_features = k,
                                          num_samples = 1000, 
                                          model_regressor = args.model_regressor,
-                                         segmentation_fn = args.segmenter)
+                                         segments = args.segments)
                 explanation_all = args.explainer_all.explain_instance(input, 
                                          filter_size = args.filter_size,
                                          classifier_fn = model, 
@@ -300,46 +312,29 @@ def test(args, model, device, test_loader, k, **kargs):
                                          #num_features = k,
                                          num_samples = 1000, 
                                          model_regressor = args.model_regressor,
-                                         segmentation_fn = args.segmenter)
-                
-                approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
-                approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
-                #approx = explanation_all.top_labels[np.argmax(explanation_all.local_pred_proba, axis = -1)]
-                #approx_fixed = explanation.top_labels[np.argmax(explanation.local_pred_proba, axis = -1)]
-                #print(approx, approx_fixed, explanabtion_all.top_labels[0])
-                index = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
+                                         segments = args.segments)
+
+                if explanation.local_exp[explanation.top_labels[0]] != 'none':
+                    approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
+                    approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
+                    #approx = explanation_all.top_labels[np.argmax(explanation_all.local_pred_proba, axis = -1)]
+                    #approx_fixed = explanation.top_labels[np.argmax(explanation.local_pred_proba, axis = -1)]
+                    index0 = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
+                else:
+                    j += 1
+                    output_all[i] = output_all[i-1]
+                    pred[i] = pred[i-1]
+                    data[i] = data[i-1]
+
                 if args.chunk_size > 1:
                     index = index_transfer(dataset = args.dataset,
-                                                 idx = index, 
+                                                 idx = index0, 
                                                  filter_size = args.filter_size,
                                                  original_nrow = args.original_nrow,
                                                  original_ncol = args.original_ncol, 
                                                  is_cuda = args.cuda).output
-                
-#                grad = explanation.local_exp_all
-#                grad_selected = explanation.local_exp
-#                
-#                
-#                #grad = (1, 1, 28, 28) tensor
-#
-#                ## Select Variables
-#                grad_size = grad.size()
-#                if args.chunk_size > 1:
-#                    grad_chunk = F.avg_pool2d(torch.abs(grad), kernel_size = args.filter_size, stride = args.filter_size, padding = 0)
-#                    _, index_chunk = torch.abs(grad_chunk.view(grad_size[0], grad_size[1], -1)).topk(k, dim = -1)
-#                    index = index_transfer(dataset = args.dataset,
-#                                                 idx = index_chunk, 
-#                                                 filter_size = args.filter_size,
-#                                                 original_nrow = args.original_nrow,
-#                                                 original_ncol = args.original_ncol, 
-#                                                 is_cuda = args.cuda).output.unsqueeze(1)
-#                else:
-#                    grad_chunk = grad
-#                    _, index = torch.abs(grad_chunk.view(grad_size[0], grad_size[1], grad_size[2] * grad_size[3])).topk(k, dim = -1)
-#
-#                ## Approximation
-#                grad_selected = grad.view(grad_size[0], grad_size[1], grad_size[2] * grad_size[3])[:,:,index[0][0]]
-#                data_selected = input.view(grad_size[0], grad_size[1], grad_size[2] * grad_size[3])[:,:,index[0][0]]
+                else:
+                    index = index0
                 
             elif 'imdb' in args.dataset:
             
@@ -349,26 +344,32 @@ def test(args, model, device, test_loader, k, **kargs):
 
                 explanation = args.explainer.explain_instance(input_embeded, 
                                          filter_size = args.filter_size, 
-                                         classifier_fn = model, 
+                                         classifier_fn = model.forward_sub, 
                                          top_labels = 2, 
                                          hide_color = 0, 
                                          num_features = k,
-                                         num_samples = 1000, 
+                                         num_samples = 10, 
                                          model_regressor = args.model_regressor,
-                                         segmentation_fn = args.segmenter)
+                                         segments = args.segments)
                 explanation_all = args.explainer_all.explain_instance(input_embeded, 
                                          filter_size = args.filter_size,
-                                         classifier_fn = model, 
+                                         classifier_fn = model.forward_sub, 
                                          top_labels = 2, 
                                          hide_color = 0, 
                                          #num_features = k,
-                                         num_samples = 1000, 
+                                         num_samples = 10, 
                                          model_regressor = args.model_regressor,
-                                         segmentation_fn = args.segmenter)
+                                         segments = args.segments)
+
+                if explanation.local_exp[explanation.top_labels[0]] != 'none':
+                    approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
+                    approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
+                    index = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
+                else:
+                    output_all[i] = output_all[i-1]
+                    pred[i] = pred[i-1]
+                    data[i] = data[i-1]
                 
-                approx = torch.Tensor(explanation_all.local_pred_proba).unsqueeze(0)
-                approx_fixed = torch.Tensor(explanation.local_pred_proba).unsqueeze(0)
-                index = cuda(torch.LongTensor([x[0] for x in explanation.local_exp[explanation.top_labels[0]]]).unsqueeze(0), args.cuda)
                 if args.chunk_size > 1:
                     index = index_transfer(dataset = args.dataset,
                                                  idx = index, 
@@ -380,54 +381,6 @@ def test(args, model, device, test_loader, k, **kargs):
 #                output = model.forward_sub(input_embeded)
 #                output = torch.max(output)
 #                grad, = torch.autograd.grad(output, input_embeded, retain_graph = True)
-#                
-#                ## Select Variables
-#                grad_size = torch.Size([grad.size(0), args.max_num_sents, args.max_num_words])
-#                if args.chunk_size == args.max_num_words:
-#                    grad_chunk = torch.sum(torch.abs(grad.view(grad.size(0), args.max_num_sents, -1)), dim = -1)
-#                    _, index_chunk = grad_chunk.topk(k, dim = -1)
-#                    index = index_transfer(dataset = args.dataset,
-#                                                 idx = index_chunk, 
-#                                                 filter_size = args.filter_size,
-#                                                 original_nrow = args.original_nrow,
-#                                                 original_ncol = args.original_ncol, 
-#                                                 is_cuda = args.cuda).output#.unsqueeze(1)#[1,150]
-#                    
-#                elif args.chunk_size > 1:
-#                    grad_chunk = torch.sum(torch.abs(grad), dim = -1)
-#                    grad_chunk = grad_chunk.unsqueeze(-1).view(grad_size[0], grad_size[1], grad_size[2])
-#                    grad_chunk = F.avg_pool1d(grad_chunk, kernel_size = args.chunk_size, stride = 1, padding = 0)
-#                    
-#                    _, index_chunk = torch.abs(grad_chunk.view(grad_size[0], 1, -1)).topk(k, dim = -1)
-#                    index = index_transfer(dataset = args.dataset,#??
-#                                                 idx = index_chunk, 
-#                                                 filter_size = args.filter_size,
-#                                                 original_nrow = args.original_nrow,
-#                                                 original_ncol = args.original_ncol, 
-#                                                 is_cuda = args.cuda).output.squeeze(1)
-#                    
-#                else:
-#                    grad_chunk = torch.sum(torch.abs(grad), dim = -1)
-#                    _, index = torch.abs(grad_chunk.view(grad_size[0], grad_size[1] * grad_size[2])).topk(k, dim = -1)#[1,3]
-#                
-#                ## Approximation
-#                grad_selected = grad.view(grad_size[0], grad_size[1] * grad_size[2], -1)[:,index[0],:]
-#                data_selected = input.view(grad_size[0], grad_size[1] * grad_size[2], -1)[:,index[0],:]
-#            
-#            else:
-#            
-#                raise UnknownDatasetError()    
-#
-#            if i == 0:
-#                grad_all = grad
-#                index_all = index
-#                grad_selected_all = grad_selected
-#                data_selected_all = data_selected
-#            else:
-#                grad_all = torch.cat((grad_all, grad), dim = 0) 
-#                index_all = torch.cat((index_all, index), dim = 0)
-#                grad_selected_all = torch.cat((grad_selected_all, grad_selected), dim = 0)
-#                data_selected_all = torch.cat((data_selected_all, data_selected), dim = 0)
 
             if i == 0:
                 approx_all = approx
@@ -529,7 +482,7 @@ def test(args, model, device, test_loader, k, **kargs):
         if idx in idx_list:
 
             # filename
-            filename = 'figure_saliency_' + args.dataset + '_chunk' + str(args.chunk_size) + '_' + str(k) + '_idx' + str(idx) + '.png'
+            filename = 'figure_lime_' + args.dataset + '_chunk' + str(args.chunk_size) + '_' + str(k) + '_idx' + str(idx) + '.png'
             filename = Path(args.out_dir).joinpath(filename)
             index_chunk = index_all
             
@@ -613,6 +566,7 @@ def test(args, model, device, test_loader, k, **kargs):
             .format(f1_micro_zeropadded, f1_micro_approx_fixed, f1_micro_approx_fixed), end = '\n') 
     print('vmi:{:.4f} vmi_fixed:{:.4f} vmi_zeropadded:{:.4f}'.format(vmi_fidel, vmi_fidel_fixed, vmi_zeropadded), end = '\n')
     print()
+    print('samples skipped:', j)
     print("[END]")
     
 #%%
