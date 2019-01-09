@@ -32,7 +32,7 @@ from sklearn.linear_model import Ridge, lars_path, LogisticRegression
 #%%
 
 class TextExplanationModified(object):
-    def __init__(self, test, segments):
+    def __init__(self, text, segments):
         """Init function.
         Args:
             text: text
@@ -145,7 +145,7 @@ class LimeTextExplainerModified(object):
                          top_labels=5, num_features=100000, num_samples=1000,
                          batch_size=10,
                          #segmentation_fn=None,
-                         #segments=None,
+                         segments=None,
                          segments_data = None,
                          distance_metric='cosine',
                          model_regressor=None,
@@ -210,35 +210,40 @@ class LimeTextExplainerModified(object):
             #for x in np.unique(segments):
                 #chunked_text[segments == x] = np.mean(chunked_text[segments == x])
    
-        fudged_text = copy.deepcopy(chunked_text)
-        fudged_text[:] = hide_color
+        #fudged_text = copy.deepcopy(text).cpu().numpy()
+        #fudged_text[:] = hide_color
         
         top = labels
-        
-        #print(torch.Tensor(chunked_text).unsqueeze(0).size())
-        _, labels, neighborhood_data = self.data_labels(text,
-                                        fudged_text, segments_data,
-                                        classifier_fn, num_samples,
-                                        batch_size=batch_size)
 
+        #print('segments_data.shape')
+        #print(segments_data.shape)
+        #print(torch.Tensor(chunked_text).unsqueeze(0).size())
+        labels, neighborhood_data = self.data_labels(text,
+                                                     #fudged_text,
+                                                     segments,
+                                                     segments_data,
+                                                     classifier_fn, num_samples,
+                                                     batch_size=batch_size)
+        #print('labels')
+        #print(np.argmax(labels, -1))
+    
         if filter_size[0] * filter_size[1] > 1:
-            neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, segments.shape[-2], segments.shape[-1]), kernel_size = filter_size, stride = filter_size, padding = 0)
+            neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, 15, 50), kernel_size = filter_size, stride = filter_size, padding = 0)
             neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
-            
+
         distances = sklearn.metrics.pairwise_distances(
             segments_data,
             segments_data[0].reshape(1, -1),
             metric=distance_metric
         ).ravel()
 
-        ret_exp = TextExplanationModified(chunked_text, segments)
-       
+        ret_exp = TextExplanationModified(text, segments)
+
         if top_labels:
             top = np.argsort(labels[0])[-top_labels:]
             ret_exp.top_labels = list(top)
             ret_exp.top_labels.reverse()
 
-        t3 = time.time()
         for label in ret_exp.top_labels:
             (ret_exp.intercept[label],
              ret_exp.local_exp[label],
@@ -256,33 +261,35 @@ class LimeTextExplainerModified(object):
                 ret_exp.local_pred_proba.append(ret_exp_local_pred_proba)
                 ret_exp.local_pred.append(ret_exp_local_pred)
 
-        t4 = time.time()
         ret_exp.local_pred_proba = np.array(ret_exp.local_pred_proba)[np.argsort(ret_exp.top_labels)]
 
         return ret_exp
     
     def data_labels(self,
                     text,
-                    fudged_text,
+                    #fudged_text,
+                    segments,
                     segments_data,
                     classifier_fn,
                     num_samples,
                     batch_size=10):
-        imgs = []
+        
+        texts = []
+        #temp0 = copy.deepcopy(text).cpu().numpy()
         for row in segments_data:
-            temp = copy.deepcopy(text.squeeze(0)).cpu().numpy()
+            temp = copy.deepcopy(text).cpu().numpy() 
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)
             for z in zeros:
                 mask[segments == z] = True
-            temp[mask] = fudged_text[mask]
-            #print(temp.shape)
-            imgs.append(temp)
+            temp[mask] = 0   
+            #temp[mask] = fudged_text[mask]
+            texts.append(temp)
         
-        preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
-        neighborhood_data = np.mean(np.stack(imgs, axis=0), axis = -1)
+        preds = classifier_fn(cuda(torch.Tensor(texts), self.is_cuda)).detach().cpu().numpy()
+        neighborhood_data = np.squeeze(np.mean(np.stack(texts, axis=0), axis = -1), axis = 1)
 
-        return data, np.array(preds), neighborhood_data
+        return np.array(preds), neighborhood_data
    
 
 #%%
@@ -331,11 +338,13 @@ class LimeImageExplainerModified(object):
                          hide_color=0,
                          top_labels=5, num_features=100000, num_samples=1000,
                          batch_size=10,
-                         segmentation_fn=None,
+                         #segmentation_fn=None,
                          segments=None,
+                         segments_data = None,
                          distance_metric='cosine',
                          model_regressor=None,
-                         random_seed=None):
+                         random_seed=None,
+                         chunked = True):
         """Generates explanations for a prediction.
         First, we generate neighborhood data by randomly perturbing features
         from the instance (see __data_inverse). We then learn locally weighted
@@ -364,74 +373,57 @@ class LimeImageExplainerModified(object):
             random_seed: integer used as random seed for the segmentation
                 algorithm. If None, a random integer, between 0 and 1000,
                 will be generated using the internal random number generator.
+            chunked: True is image whose pixels are fuzzed within each chunk is used to generate neighborhood labels 
         Returns:
             An Explanation object (see explanation.py) with the corresponding
             explanations.
            
         """
-        if random_seed is None:
-            random_seed = self.random_state.randint(0, high=1000)
+        #if random_seed is None:
+        #    random_seed = self.random_state.randint(0, high=1000)
 
-        if segments is None:
+        #if segments is None:
 
-            if segmentation_fn is None:
-                segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
-                                                    max_dist=200, ratio=0.2,
-                                                    random_seed=random_seed)
-            try:
-                segments = segmentation_fn(image) # (1, 28, 28)
+        #    if segmentation_fn is None:
+        #        segmentation_fn = SegmentationAlgorithm('quickshift', kernel_size=4,
+        #                                            max_dist=200, ratio=0.2,
+        #                                           random_seed=random_seed)
+        #    try:
+        #        segments = segmentation_fn(image) # (1, 28, 28)
 
-            except ValueError as e:
-                raise e
+        #    except ValueError as e:
+        #        raise e
 
         #t0 = time.time()
         chunked_image = copy.deepcopy(image)
         chunked_image = chunked_image.squeeze(0)
         chunked_image = chunked_image.cpu().numpy()
 
-        if filter_size[0] * filter_size[1] > 1:
-            #image = F.avg_pool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
-            #image = F.max_unpool2d(image, kernel_size = filter_size, stride = filter_size, padding = 0)
+        if filter_size[0] * filter_size[1] > 1 and chunked:
+
             for x in np.unique(segments):
                 chunked_image[segments == x] = np.mean(chunked_image[segments == x])
-            #chunked_image = torch.Tensor(chunked_image).unsqueeze(0)
-        t1 = time.time()
-        #print(t1 - t0)
            
         fudged_image = copy.deepcopy(chunked_image)
-        #fudged_image = fudged_image.squeeze(0)
-        #fudged_image = fudged_image.numpy()
         fudged_image[:] = hide_color
         
-#        if len(image.shape) == 4: 
-#            image = gray2rgb(image.numpy().astype(int))
-#            
-#        fudged_image = image.copy() # (1, 1, 28, 28, 3)
-#        if hide_color is None:
-#            for x in np.unique(segments):
-#                fudged_image[segments == x] = (
-#                    np.mean(image[segments == x][:, 0]),
-#                    np.mean(image[segments == x][:, 1]),
-#                    np.mean(image[segments == x][:, 2]))
-#        else:
-#            fudged_image[:] = hide_color
-
         top = labels
 
-        #print(torch.Tensor(chunked_image).unsqueeze(0).size())
-        data, labels, neighborhood_data = self.data_labels(#image,
+        labels, neighborhood_data = self.data_labels(#image,
             torch.Tensor(chunked_image).unsqueeze(0),
-                                        fudged_image, segments,
-                                        classifier_fn, num_samples,
-                                        batch_size=batch_size)
+            fudged_image, segments,
+            segments_data,
+            classifier_fn, num_samples,
+            batch_size=batch_size)
 
+        
         if filter_size[0] * filter_size[1] > 1:
             neighborhood_data = F.avg_pool2d(torch.Tensor(neighborhood_data).view(num_samples, segments.shape[-2], segments.shape[-1]), kernel_size = filter_size, stride = filter_size, padding = 0)
             neighborhood_data = neighborhood_data.cpu().numpy().reshape(num_samples, neighborhood_data.size(-2) * neighborhood_data.size(-1))
             
         distances = sklearn.metrics.pairwise_distances(
-            data,
-            data[0].reshape(1, -1),
+            segments_data,
+            segments_data[0].reshape(1, -1),
             metric=distance_metric
         ).ravel()
 
@@ -442,7 +434,6 @@ class LimeImageExplainerModified(object):
             ret_exp.top_labels = list(top)
             ret_exp.top_labels.reverse()
 
-        t3 = time.time()
         for label in ret_exp.top_labels:
             (ret_exp.intercept[label],
              ret_exp.local_exp[label],
@@ -456,11 +447,9 @@ class LimeImageExplainerModified(object):
                 ret_exp.local_pred_proba = [ret_exp_local_pred_proba]
                 ret_exp.local_pred = [ret_exp_local_pred]
             else:
-                #print(ret_exp_score, ret_exp_local_pred)
                 ret_exp.local_pred_proba.append(ret_exp_local_pred_proba)
                 ret_exp.local_pred.append(ret_exp_local_pred)
 
-        t4 = time.time()
         ret_exp.local_pred_proba = np.array(ret_exp.local_pred_proba)[np.argsort(ret_exp.top_labels)]
 
         return ret_exp
@@ -469,6 +458,7 @@ class LimeImageExplainerModified(object):
                     image,
                     fudged_image,
                     segments,
+                    segments_data,
                     classifier_fn,
                     num_samples,
                     batch_size=10):
@@ -488,13 +478,14 @@ class LimeImageExplainerModified(object):
                 labels: prediction probabilities matrix
         """
 
-        n_features = np.unique(segments).shape[0]
-        data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
+        #n_features = np.unique(data).shape[0]
+        #data = self.random_state.randint(0, 2, num_samples * n_features).reshape((num_samples, n_features))
         #labels = []
-        data[0, :] = 1
+        #data[0, :] = 1
         imgs = []
         #t0 = time.time()
-        for row in data:
+        #temp0 = copy.deepcopy(image.squeeze(0)).cpu().numpy()
+        for row in segments_data:
             temp = copy.deepcopy(image.squeeze(0)).cpu().numpy()
             zeros = np.where(row == 0)[0]
             mask = np.zeros(segments.shape).astype(bool)
@@ -506,7 +497,7 @@ class LimeImageExplainerModified(object):
         preds = classifier_fn(cuda(torch.Tensor(imgs), self.is_cuda)).detach().cpu().numpy()
         neighborhood_data = np.reshape(np.squeeze(np.stack(imgs, axis=0), axis=1), (num_samples, -1))
         
-        return data, np.array(preds), neighborhood_data
+        return np.array(preds), neighborhood_data
    
  #%%   
 class LimeBaseModified(object):
