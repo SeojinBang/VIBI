@@ -359,7 +359,7 @@ class index_transfer(object):
         return idx_unpool
     
     def imdb(self):
-        
+
         if self.filter_size_col < self.original_ncol:
             
             chunk_size = self.filter_size_col
@@ -367,7 +367,6 @@ class index_transfer(object):
             
             new_size_col = self.original_ncol - chunk_size + 1
             self.idx = torch.add(self.idx, torch.mul(torch.div(self.idx, new_size_col), chunk_size - 1))
-                        
             self.idx = torch.add(self.idx.unsqueeze(-1).expand(-1,-1,-1,chunk_size), newadd)
             newsize = self.idx.size()
             self.idx = self.idx.view(newsize[0], newsize[1], -1, 1).squeeze(-1)
@@ -375,7 +374,7 @@ class index_transfer(object):
             return self.idx
         
         else:
-            
+
             return self.default()
         
     def mnist(self):    
