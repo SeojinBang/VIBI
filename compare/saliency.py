@@ -279,7 +279,6 @@ def test(args, model, device, test_loader, k, **kargs):
 #                    else:
 #                        UnknownModelError()
                     
-                        
                     index = index_transfer(dataset = args.dataset,
                                                  idx = index_chunk, 
                                                  filter_size = args.filter_size,
@@ -340,11 +339,10 @@ def test(args, model, device, test_loader, k, **kargs):
                                                  original_nrow = args.original_nrow,
                                                  original_ncol = args.original_ncol, 
                                                  is_cuda = args.cuda).output.squeeze(1)
-                    
                 else:
                     grad_chunk = torch.sum(torch.abs(grad), dim = -1)
                     _, index = torch.abs(grad_chunk.view(grad_size[0], grad_size[1] * grad_size[2])).topk(k, dim = -1)#[1,3]
-                
+
                 ## Approximation
                 grad_selected = grad.view(grad_size[0], grad_size[1] * grad_size[2], -1)[:,index[0],:]
                 data_selected = input.view(grad_size[0], grad_size[1] * grad_size[2], -1)[:,index[0],:]
@@ -352,7 +350,7 @@ def test(args, model, device, test_loader, k, **kargs):
             else:
             
                 raise UnknownDatasetError()    
-
+            
             if i == 0:
                 grad_all = grad
                 index_all = index
