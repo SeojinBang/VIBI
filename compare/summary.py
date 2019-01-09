@@ -34,7 +34,8 @@ def main(args):
                 'f1_micro_zeropadded', 'f1_micro_approx', 'f1_micro_approx_fixed',
                 'vmi', 'vmi_fixed', 'vmi_zeropadded']
     
-    if dataset is 'mnist':
+    if dataset == 'mnist':
+        print('summarize mnist')
         K = [64, 96, 160, 320, 16, 24, 40, 80, 4, 6, 10, 20]
         chunksize = [1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4]
         assert len(K) == len(chunksize)
@@ -43,7 +44,8 @@ def main(args):
         for i in range(len(K)):
             fns = np.append(fns, ['log_' + dataset + '_' + method + '_K' + str(K[i]) + '_chunk' + str(chunksize[i]) + '.txt'])
             
-    elif dataset is 'imdb':
+    elif dataset == 'imdb':
+        print('summarize imdb')
         K = [1, 5, 15, 1, 3, 5, 10, 15]
         chunksize = [50, 1, 1, 5, 5, 5, 5, 5]
         assert len(K) == len(chunksize)
@@ -56,7 +58,8 @@ def main(args):
     
     for mea_idx in range(len(measures)):
         for fn in fns:
-            f = open(Path(result_dir).joinpath(fn), 'r')
+            #f = open(Path(result_dir).joinpath(fn), 'r')
+            f = open(result_dir + '/' + fn, 'r')
             if f.mode == 'r':
                 contents = f.read()
                 idx = contents.find(measures[mea_idx])
