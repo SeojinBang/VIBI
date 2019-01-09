@@ -111,9 +111,9 @@ def main():
         args.filter_size = (args.chunk_size, args.chunk_size)
         args.explainer = LimeImageExplainerModified(verbose = False, feature_selection = 'highest_weights', is_cuda = args.cuda, dataset = args.dataset)
         args.explainer_all = LimeImageExplainerModified(verbose = False, feature_selection = 'none', is_cuda = args.cuda, dataset = args.dataset)
+        args.segment_filter_size = 2
         args.segmenter = Segmentation(dataset = args.dataset,
-                                      filter_size = (2, 2),
-                                      #filter_size = args.filter_size,
+                                      filter_size = (args.segment_filter_size, args.segment_filter_size),
                                       is_cuda = args.cuda)
         args.model_regressor = LogisticRegression(random_state = 0, solver='lbfgs', max_iter = 200, fit_intercept=True, multi_class='ovr')
         args.num_samples = 1000
@@ -217,7 +217,7 @@ def test(args, model, device, test_loader, k, **kargs):
     start = time.time()
     for idx, batch in enumerate(test_loader):#(data, target, _, _)
         #print('####### idx break ####### you must remove this before running')
-        #if idx > 0:
+        #if idx > 3:
         #    break
         if 'mnist' in args.dataset:
             
@@ -393,6 +393,7 @@ def test(args, model, device, test_loader, k, **kargs):
 
                 else:
                     j += 1
+                    #print(j)
                     #output_all[i] = output_all[i-1]
                     #pred[i] = pred[i-1]
                     #data[i] = data[i-1]
@@ -500,7 +501,7 @@ def test(args, model, device, test_loader, k, **kargs):
 
             # filename
             mname = re.sub(r'\.ckpt$', '', str(args.model_name))
-            filename = 'figure_lime_' + args.dataset + '_model_' + mname + '_chunk' + str(args.chunk_size) + '_' + str(k) + '_idx' + str(idx) + '.png'
+            filename = 'figure_lime_' + args.dataset + '_model_' + mname + '_filter_' + str(args.segment_filter_size) +  '_chunk' + str(args.chunk_size) + '_'  + str(k) + '_idx' + str(idx) + '.png'
             filename = Path(args.out_dir).joinpath(filename)
             index_chunk = index_all
             
