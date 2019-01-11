@@ -41,9 +41,10 @@ def main(args):
     net = Solver(args)
 #%%
     if args.mode == 'train' :
-        net.train()
-    elif args.mode == 'test' : 
-        net.val(test = True)
+        net.train(test = False)
+    elif args.mode == 'test' :
+        net.train(test = True)
+        #net.val(test = True)
     else : 
         print('\nError: "--mode train" or "--mode test" expected')
 #%% ##
@@ -51,7 +52,7 @@ if __name__ == "__main__":
 #%%
     parser = argparse.ArgumentParser(description = 'DeepVIB for interpretation')
     parser.add_argument('--epoch', default = 50, type = int, help = 'epoch number')
-    parser.add_argument('--lr', default = 5e-3, type = float, help = 'learning rate')
+    parser.add_argument('--lr', default = 1e-4, type = float, help = 'learning rate')
     parser.add_argument('--beta', default = 0.1, type = float, help = 'beta for balance between information loss and prediction loss')
     #parser.add_argument('--K', required = True, type = int, help='dimension of encoding Z')
     parser.add_argument('--K', default = -1, type = int, help='dimension of encoding Z') # required = True
@@ -75,8 +76,9 @@ if __name__ == "__main__":
     parser.add_argument('--cuda', default = True, type = str2bool, help = 'enable cuda')
     parser.add_argument('--mode', default = 'train', type=str, help = 'train or test')
     parser.add_argument('--tensorboard',default = True, type= str2bool, help='enable tensorboard')
-    parser.add_argument('--save_image', default = True, type= str2bool, help='if True, then save image')
-         
+    parser.add_argument('--save_image',default = True, type= str2bool, help='if True, then save images')
+    parser.add_argument('--save_checkpoint',default = False, type= str2bool, help='if True, then save checkpoint')
+
     args = parser.parse_args()
 #%%
     main(args)
