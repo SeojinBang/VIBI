@@ -27,6 +27,7 @@ class Solver(object):
         self.dataset = args.dataset
         self.epoch = args.epoch
         self.save_image = args.save_image
+        self.save_checkpoint = args.save_checkpoint
         self.batch_size = args.batch_size
         self.lr = args.lr # learning rate
         self.beta = args.beta
@@ -149,48 +150,40 @@ class Solver(object):
         if self.load_checkpoint != '' : self.load_checkpoint(self.load_checkpoint)
         self.checkpoint_name = args.checkpoint_name
 
-        # History
-        self.history = dict()
-        self.history['info_loss'] = 0.
-        self.history['class_loss'] = 0.
-        self.history['total_loss'] = 0.
-        self.history['epoch'] = 0
-        self.history['iter'] = 0
+        if self.save_checkpoint:
+            # History
+            self.history = dict()
+            self.history['info_loss'] = 0.
+            self.history['class_loss'] = 0.
+            self.history['total_loss'] = 0.
+            self.history['epoch'] = 0
+            self.history['iter'] = 0
         
-        self.history['avg_acc'] = 0.
-        self.history['avg_acc_fixed'] = 0.
-#        self.history['avg_auc_macro'] = 0.
-#        self.history['avg_auc_micro'] = 0.
-#        self.history['avg_auc_weighted'] = 0.
-        self.history['avg_precision_macro'] = 0.
-        self.history['avg_precision_micro'] = 0.
-        self.history['avg_precision_fixed_macro'] = 0.
-        self.history['avg_precision_fixed_micro'] = 0.
-        #self.history['avg_precision_weighted'] = 0.
-        self.history['avg_recall_macro'] = 0.
-        self.history['avg_recall_micro'] = 0.
-        self.history['avg_recall_fixed_macro'] = 0.
-        self.history['avg_recall_fixed_micro'] = 0.
-        #self.history['avg_recall_weighted'] = 0. 
-        self.history['avg_f1_macro'] = 0.
-        self.history['avg_f1_micro'] = 0.
-        self.history['avg_f1_fixed_macro'] = 0.
-        self.history['avg_f1_fixed_micro'] = 0.
-        #self.history['avg_f1_weighted'] = 0.
- 
-        self.history['acc_zeropadded'] = 0.
-        self.history['precision_macro_zeropadded'] = 0.
-        self.history['precision_micro_zeropadded'] = 0.
-#        self.history['precision_weighted_zeropadded'] = 0.
-        self.history['recall_macro_zeropadded'] = 0.
-        self.history['recall_micro_zeropadded'] = 0.
-#        self.history['recall_weighted_zeropadded'] = 0. 
-        self.history['f1_macro_zeropadded'] = 0.
-        self.history['f1_micro_zeropadded'] = 0.
-#        self.history['f1_weighted_zeropadded'] = 0.  
-        self.history['vmi_zeropadded'] = 0.
-        self.history['avg_vmi'] = 0.       
-        self.history['avg_vmi_fixed'] = 0.
+            self.history['avg_acc'] = 0.
+            self.history['avg_acc_fixed'] = 0.
+            self.history['avg_precision_macro'] = 0.
+            self.history['avg_precision_micro'] = 0.
+            self.history['avg_precision_fixed_macro'] = 0.
+            self.history['avg_precision_fixed_micro'] = 0.
+            self.history['avg_recall_macro'] = 0.
+            self.history['avg_recall_micro'] = 0.
+            self.history['avg_recall_fixed_macro'] = 0.
+            self.history['avg_recall_fixed_micro'] = 0.
+            self.history['avg_f1_macro'] = 0.
+            self.history['avg_f1_micro'] = 0.
+            self.history['avg_f1_fixed_macro'] = 0.
+            self.history['avg_f1_fixed_micro'] = 0.
+            
+            self.history['acc_zeropadded'] = 0.
+            self.history['precision_macro_zeropadded'] = 0.
+            self.history['precision_micro_zeropadded'] = 0.
+            self.history['recall_macro_zeropadded'] = 0.
+            self.history['recall_micro_zeropadded'] = 0.
+            self.history['f1_macro_zeropadded'] = 0.
+            self.history['f1_micro_zeropadded'] = 0.
+            self.history['vmi_zeropadded'] = 0.
+            self.history['avg_vmi'] = 0.       
+            self.history['avg_vmi_fixed'] = 0.
 
         # Tensorboard
         self.tensorboard = args.tensorboard
@@ -308,7 +301,6 @@ class Solver(object):
                     data_zeropadded = torch.addcmul(torch.zeros(1), value = 1, 
                                                     tensor1=binary_selected_all.view(data_size).type(torch.FloatTensor), tensor2=x_raw.type(torch.FloatTensor), out=None)
                     data_zeropadded = data_zeropadded.type(self.x_type)
-                    #data_zeropadded[data_zeropadded == 0] = -1
                     
                 elif 'imdb' in self.dataset:
                 
@@ -326,20 +318,14 @@ class Solver(object):
                 output_original = self.black_box(x)
                 output_zeropadded = self.black_box(data_zeropadded)                
                 pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
-                #pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
                 accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
-                #seojin print('train zeropadded', pred_zeropadded)
-                #seojin print('train true', y_class)
            
                 precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
                 precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
-                #precision_weighted_zeropadded = precision_score(y_class, pred_zeropadded, average = 'weighted')
                 recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
                 recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
-                #recall_weighted_zeropadded = recall_score(y_class, pred_zeropadded, average = 'weighted')
                 f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
                 f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
-                #f1_weighted_zeropadded = f1_score(y_class, pred_zeropadded, average = 'weighted')
         
                 ## Variational Mutual Information            
                 vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
@@ -365,24 +351,18 @@ class Solver(object):
                     avg_accuracy = torch.eq(avg_prediction,y_class).float().mean()
                     avg_prediction_fixed  = avg_soft_logit_fixed.max(1)[1]
                     avg_accuracy_fixed  = torch.eq(avg_prediction_fixed,y_class).float().mean()                  
-#                    avg_auc_macro = roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'macro')
-#                    avg_auc_micro = roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'micro')
-                    #avg_auc_weighted = roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'weighted') 
                     avg_precision_macro = precision_score(y_class, avg_prediction, average = 'macro')  
                     avg_precision_micro = precision_score(y_class, avg_prediction, average = 'micro')  
                     avg_precision_fixed_macro = precision_score(y_class, avg_prediction_fixed, average = 'macro')  
                     avg_precision_fixed_micro = precision_score(y_class, avg_prediction_fixed, average = 'micro') 
-                    #avg_precision_weighted = precision_score(y_class, avg_prediction, average = 'weighted')
                     avg_recall_macro = recall_score(y_class, avg_prediction, average = 'macro')
                     avg_recall_micro = recall_score(y_class, avg_prediction, average = 'micro')
                     avg_recall_fixed_macro = recall_score(y_class, avg_prediction_fixed, average = 'macro')
                     avg_recall_fixed_micro = recall_score(y_class, avg_prediction_fixed, average = 'micro')
-                    #avg_recall_weighted = recall_score(y_class, avg_prediction, average = 'weighted')
                     avg_f1_macro = f1_score(y_class, avg_prediction, average = 'macro')
                     avg_f1_micro = f1_score(y_class, avg_prediction, average = 'micro')
                     avg_f1_fixed_macro = f1_score(y_class, avg_prediction_fixed, average = 'macro')
                     avg_f1_fixed_micro = f1_score(y_class, avg_prediction_fixed, average = 'micro')
-                    #avg_f1_weighted = f1_score(y_class, avg_prediction, average = 'weighted')  
             
                     ## Variational Mutual Information            
                     vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
@@ -398,48 +378,25 @@ class Solver(object):
                     avg_vmi_fidel_fixed = vmi.mean()
                     
                 else : 
-#                    avg_accuracy = Variable(cuda(torch.zeros(accuracy.size()), self.args.cuda))
-#                    #avg_auc_macro = Variable(cuda(torch.zeros(auc_macro.size()), self.args.cuda))
-#                    #avg_auc_micro = Variable(cuda(torch.zeros(auc_micro.size()), self.args.cuda))
-#                    #avg_auc_weighted = Variable(cuda(torch.zeros(auc_weighted.size()), self.args.cuda))
-#                    avg_precision_macro = Variable(cuda(torch.zeros(precision_macro.size()), self.args.cuda))
-#                    avg_precision_micro = Variable(cuda(torch.zeros(precision_micro.size()), self.args.cuda))
-#                    #avg_precision_weighted = Variable(cuda(torch.zeros(precision_weighted.size()), self.args.cuda))
-#                    avg_recall_macro = Variable(cuda(torch.zeros(recall_macro.size()), self.args.cuda))
-#                    avg_recall_micro = Variable(cuda(torch.zeros(recall_micro.size()), self.args.cuda))
-#                    #avg_recall_weighted = Variable(cuda(torch.zeros(recall_weighted.size()), self.args.cuda))
-#                    avg_f1_macro = Variable(cuda(torch.zeros(f1_macro.size()), self.args.cuda))
-#                    avg_f1_micro = Variable(cuda(torch.zeros(f1_micro.size()), self.args.cuda))
-#                    #avg_f1_weighted = Variable(cuda(torch.zeros(f1_weighted.size()), self.args.cuda))
-                    
                     avg_accuracy = accuracy
                     avg_accuracy_fixed = accuracy_fixed
-#                    avg_auc_macro = auc_macro
-#                    avg_auc_micro = auc_micro
-                    #avg_auc_weighted = auc_weighted
                     avg_precision_macro = precision_macro
                     avg_precision_micro = precision_micro
                     avg_precision_fixed_macro = precision_fixed_macro
                     avg_precision_fixed_micro = precision_fixed_micro
-                    #avg_precision_weighted = precision_weighted
                     avg_recall_macro = recall_macro
                     avg_recall_micro = recall_micro
                     avg_recall_fixed_macro = recall_fixed_macro
                     avg_recall_fixed_micro = recall_fixed_micro
-                    #avg_recall_weighted = recall_weighted
                     avg_f1_macro = f1_macro
                     avg_f1_micro = f1_micro
                     avg_f1_fixed_macro = f1_fixed_macro
                     avg_f1_fixed_micro = f1_fixed_micro
-                    #avg_f1_weighted = f1_weighted
 
                     avg_vmi_fidel = vmi_fidel
                     avg_vmi_fidel_fixed = vmi_fidel_fixed
                     
                 if self.global_iter % 1000 == 0 :
-                #     print('i:{} IZY:{:.2f} IZX:{:.2f}'.format(idx+1, izy_bound.item(), izx_bound.item()), end=' ')
-                #     print('acc:{:.4f} avg_acc:{:.4f}'.format(accuracy.item(), avg_accuracy.item()), end=' ')
-                #     print('err:{:.4f} avg_err:{:.4f}'.format(1-accuracy.item(), 1-avg_accuracy.item()))
 
                     print('\n\n[TRAINING RESULT]\n')
                     #print("logit", logit)
@@ -461,10 +418,6 @@ class Solver(object):
                             .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
                     print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
                             .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')
-##                    print('auc_macro:{:.4f} avg_auc_macro:{:.4f}'
-##                            .format(auc_macro.item(), avg_auc_macro.item()), end = '\n')   
-##                    print('auc_micro:{:.4f} avg_auc_micro:{:.4f}'
-##                            .format(auc_micro.item(), avg_auc_micro.item()), end = '\n')     
 #                    print('precision_macro:{:.4f} avg_precision_macro:{:.4f}'
 #                            .format(precision_macro.item(), avg_precision_macro.item()), end='\n')   
 #                    print('precision_micro:{:.4f} avg_precision_micro:{:.4f}'
@@ -667,7 +620,7 @@ class Solver(object):
                                                 'I(Z;X)':izx_bound.item()},
                                             global_step=self.global_iter)
 #%%
-            if (self.global_epoch % 2) == 0 : self.scheduler.step()
+            #if (self.global_epoch % 2) == 0 : self.scheduler.step()
             self.val()
             
             print("epoch:{}".format(e + 1))
@@ -675,7 +628,7 @@ class Solver(object):
             
         print(" [*] Training Finished!")
 
-    def val(self, test = True):
+    def val(self, test = False):
 #%%        
         self.set_mode('eval')
         #self.class_criterion_val = nn.CrossEntropyLoss()#size_average = False)
@@ -756,7 +709,8 @@ class Solver(object):
 
 #%%     
         with torch.no_grad():
-            data_type = 'test' if test else 'valid'  
+            #data_type = 'test' if test else 'valid'  
+            data_type = 'valid' if test else 'test'
             #for idx, (x_raw, _, y_raw, _) in enumerate(self.data_loader[data_type]):
             for idx, batch in enumerate(self.data_loader[data_type]):
                   
@@ -980,7 +934,7 @@ class Solver(object):
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
                 
                 #%% save image #
-                if args.save_image and (self.global_epoch % 5 == 0):
+                if self.save_image and (self.global_epoch % 5 == 0):
                     #print("SAVED!!!!")
                     if idx in self.idx_list: #(idx == 0 or idx == 200):
         
@@ -1132,7 +1086,7 @@ class Solver(object):
             
             print()
 #%%                
-            if self.history['avg_acc'] < avg_accuracy.item() :
+            if self.save_checkpoint and (self.history['avg_acc'] < avg_accuracy.item()) :
                 
                 self.history['class_loss'] = class_loss.item()
                 self.history['info_loss'] = info_loss.item()
