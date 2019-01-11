@@ -58,7 +58,7 @@ if __name__ == "__main__":
     parser.add_argument('--K', default = -1, type = int, help='dimension of encoding Z') # required = True
     parser.add_argument('--chunk_size', default = -1, type = int, help='chunk size. for image, chunk x chunk will be the actual chunk size')
     parser.add_argument('--num_avg', default = 12, type = int, help='the number of samples when perform multi-shot prediction')
-    parser.add_argument('--batch_size', default = 50, type = int, help='batch size')
+    parser.add_argument('--batch_size', default = 100, type = int, help='batch size')
     parser.add_argument('--env_name', default = 'main', type = str, help='visdom env name')
     #parser.add_argument('--dataset', required = True, type = str, help='dataset name: imdb-sent, imdb-word, mnist, mimic')
     parser.add_argument('--dataset', default = 'imdb', type = str, help='dataset name: imdb, mnist, mimic')
