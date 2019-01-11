@@ -51,7 +51,7 @@ if __name__ == "__main__":
 #%%
     parser = argparse.ArgumentParser(description = 'DeepVIB for interpretation')
     parser.add_argument('--epoch', default = 50, type = int, help = 'epoch number')
-    parser.add_argument('--lr', default = 5e-3, type = float, help = 'learning rate')
+    parser.add_argument('--lr', default = 1e-4, type = float, help = 'learning rate')
     parser.add_argument('--beta', default = 0.1, type = float, help = 'beta for balance between information loss and prediction loss')
     #parser.add_argument('--K', required = True, type = int, help='dimension of encoding Z')
     parser.add_argument('--K', default = -1, type = int, help='dimension of encoding Z') # required = True
