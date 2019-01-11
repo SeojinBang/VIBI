@@ -672,7 +672,7 @@ class Solver(object):
             
         print(" [*] Training Finished!")
 
-    def val(self, test = False):
+    def val(self, test = True):
 #%%        
         self.set_mode('eval')
         #self.class_criterion_val = nn.CrossEntropyLoss()#size_average = False)
