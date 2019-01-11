@@ -26,6 +26,7 @@ class Solver(object):
         self.args = args
         self.dataset = args.dataset
         self.epoch = args.epoch
+        self.save_image = args.save_image
         self.batch_size = args.batch_size
         self.lr = args.lr # learning rate
         self.beta = args.beta
@@ -475,7 +476,7 @@ class Solver(object):
 #                    print('f1_micro_zeropadded:{:.4f}'
 #                            .format(f1_micro_zeropadded.item()), end = '\n') 
             
-                if self.global_iter % 100 == 0 :
+                if self.global_iter % 1000 == 0 :
                     if self.tensorboard :
                         self.tf.add_scalars(main_tag='performance/accuracy',
                                             tag_scalar_dict={
@@ -915,7 +916,7 @@ class Solver(object):
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
                 
                 #%% save image #
-                if self.global_epoch % 5 == 0 or self.global_epoch is self.epoch:
+                if self.save_image and (self.global_epoch % 5 == 0 or self.global_epoch is self.epoch):
                     #print("SAVED!!!!")
                     if (idx < 3):
         
@@ -945,7 +946,7 @@ class Solver(object):
                                    word_idx = self.args.word_idx).output##
 #%%    
             ## Post-hoc Accuracy (zero-padded accuracy)
-            accuracy_zeropadded = correct_zeropadded/total_num_ind
+            #accuracy_zeropadded = correct_zeropadded/total_num_ind
 
             vmi_fidel = vmi_fidel_sum/total_num_ind
             vmi_fidel_fixed = vmi_fidel_fixed_sum/total_num_ind
@@ -1067,7 +1068,6 @@ class Solver(object):
                                         data_type + '_multi-shot':avg_f1_micro
                                         },
                                     global_step=self.global_iter)
-
                 self.tf.add_scalars(main_tag='performance/precision_fixed_macro',
                                     tag_scalar_dict={
                                         data_type + '_one-shot':precision_fixed_macro,
