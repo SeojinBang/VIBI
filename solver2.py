@@ -135,7 +135,7 @@ class Solver(object):
         
         # Optimizer
         self.optim = optim.Adam(self.net.parameters(),lr=self.lr,betas=(0.5,0.999))
-        self.scheduler = lr_scheduler.ExponentialLR(self.optim,gamma=0.97)
+        #self.scheduler = lr_scheduler.ExponentialLR(self.optim,gamma=0.97)
 
         # Checkpoint
         self.checkpoint_dir = Path(args.dataset).joinpath(args.checkpoint_dir, args.env_name)
@@ -271,14 +271,14 @@ class Solver(object):
 #                auc_micro = roc_auc_score(y_binary, logit.detach().numpy(), average = 'micro')
                 #auc_weighted = roc_auc_score(y_binary, logit.detach().numpy(), average = 'weighted')    
                 precision_macro = precision_score(y_class, prediction, average = 'macro')  
-                precision_micro = precision_score(y_class, prediction, average = 'micro')  
+                #precision_micro = precision_score(y_class, prediction, average = 'micro')  
                 precision_fixed_macro = precision_score(y_class, prediction_fixed, average = 'macro') 
-                precision_fixed_micro = precision_score(y_class, prediction_fixed, average = 'micro')  
+                #precision_fixed_micro = precision_score(y_class, prediction_fixed, average = 'micro')  
                 #precision_weighted = precision_score(y_class, prediction, average = 'weighted')
                 recall_macro = recall_score(y_class, prediction, average = 'macro')
-                recall_micro = recall_score(y_class, prediction, average = 'micro')
+                #recall_micro = recall_score(y_class, prediction, average = 'micro')
                 recall_fixed_macro = recall_score(y_class, prediction_fixed, average = 'macro')
-                recall_fixed_micro = recall_score(y_class, prediction_fixed, average = 'micro')        
+                #recall_fixed_micro = recall_score(y_class, prediction_fixed, average = 'micro')        
                 #recall_weighted = recall_score(y_class, prediction, average = 'weighted')
                 f1_macro = f1_score(y_class, prediction, average = 'macro')
                 f1_micro = f1_score(y_class, prediction, average = 'micro')
@@ -321,29 +321,29 @@ class Solver(object):
 #%%            
                 # Post-hoc Accuracy (zero-padded accuracy)
                 output_original = self.black_box(x)
-                output_zeropadded = self.black_box(data_zeropadded)                
-                pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
-                #pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
-                accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
-                #seojin print('train zeropadded', pred_zeropadded)
-                #seojin print('train true', y_class)
+                #output_zeropadded = self.black_box(data_zeropadded)                
+                #pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
+                ##pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
+                #accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
+                ##seojin print('train zeropadded', pred_zeropadded)
+                ##seojin print('train true', y_class)
            
-                precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
-                precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
-                #precision_weighted_zeropadded = precision_score(y_class, pred_zeropadded, average = 'weighted')
-                recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
-                recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
-                #recall_weighted_zeropadded = recall_score(y_class, pred_zeropadded, average = 'weighted')
-                f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
-                f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
-                #f1_weighted_zeropadded = f1_score(y_class, pred_zeropadded, average = 'weighted')
+                #precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
+                #precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
+                ##precision_weighted_zeropadded = precision_score(y_class, pred_zeropadded, average = 'weighted')
+                #recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
+                #recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
+                ##recall_weighted_zeropadded = recall_score(y_class, pred_zeropadded, average = 'weighted')
+                #f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
+                #f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
+                ##f1_weighted_zeropadded = f1_score(y_class, pred_zeropadded, average = 'weighted')
         
                 ## Variational Mutual Information            
-                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                              out=None), dim = -1)
-                vmi_zeropadded = vmi.mean()
+                #vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                #                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                #                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                #                              out=None), dim = -1)
+                #vmi_zeropadded = vmi.mean()
                 vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
                                               tensor1 = torch.exp(output_original).type(torch.FloatTensor),
                                               tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
@@ -366,14 +366,14 @@ class Solver(object):
 #                    avg_auc_micro = roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'micro')
                     #avg_auc_weighted = roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'weighted') 
                     avg_precision_macro = precision_score(y_class, avg_prediction, average = 'macro')  
-                    avg_precision_micro = precision_score(y_class, avg_prediction, average = 'micro')  
+                    #avg_precision_micro = precision_score(y_class, avg_prediction, average = 'micro')  
                     avg_precision_fixed_macro = precision_score(y_class, avg_prediction_fixed, average = 'macro')  
-                    avg_precision_fixed_micro = precision_score(y_class, avg_prediction_fixed, average = 'micro') 
+                    #avg_precision_fixed_micro = precision_score(y_class, avg_prediction_fixed, average = 'micro') 
                     #avg_precision_weighted = precision_score(y_class, avg_prediction, average = 'weighted')
                     avg_recall_macro = recall_score(y_class, avg_prediction, average = 'macro')
-                    avg_recall_micro = recall_score(y_class, avg_prediction, average = 'micro')
+                    #avg_recall_micro = recall_score(y_class, avg_prediction, average = 'micro')
                     avg_recall_fixed_macro = recall_score(y_class, avg_prediction_fixed, average = 'macro')
-                    avg_recall_fixed_micro = recall_score(y_class, avg_prediction_fixed, average = 'micro')
+                    #avg_recall_fixed_micro = recall_score(y_class, avg_prediction_fixed, average = 'micro')
                     #avg_recall_weighted = recall_score(y_class, avg_prediction, average = 'weighted')
                     avg_f1_macro = f1_score(y_class, avg_prediction, average = 'macro')
                     avg_f1_micro = f1_score(y_class, avg_prediction, average = 'micro')
@@ -394,35 +394,21 @@ class Solver(object):
                                                   out=None), dim = -1)
                     avg_vmi_fidel_fixed = vmi.mean()
                     
-                else : 
-#                    avg_accuracy = Variable(cuda(torch.zeros(accuracy.size()), self.args.cuda))
-#                    #avg_auc_macro = Variable(cuda(torch.zeros(auc_macro.size()), self.args.cuda))
-#                    #avg_auc_micro = Variable(cuda(torch.zeros(auc_micro.size()), self.args.cuda))
-#                    #avg_auc_weighted = Variable(cuda(torch.zeros(auc_weighted.size()), self.args.cuda))
-#                    avg_precision_macro = Variable(cuda(torch.zeros(precision_macro.size()), self.args.cuda))
-#                    avg_precision_micro = Variable(cuda(torch.zeros(precision_micro.size()), self.args.cuda))
-#                    #avg_precision_weighted = Variable(cuda(torch.zeros(precision_weighted.size()), self.args.cuda))
-#                    avg_recall_macro = Variable(cuda(torch.zeros(recall_macro.size()), self.args.cuda))
-#                    avg_recall_micro = Variable(cuda(torch.zeros(recall_micro.size()), self.args.cuda))
-#                    #avg_recall_weighted = Variable(cuda(torch.zeros(recall_weighted.size()), self.args.cuda))
-#                    avg_f1_macro = Variable(cuda(torch.zeros(f1_macro.size()), self.args.cuda))
-#                    avg_f1_micro = Variable(cuda(torch.zeros(f1_micro.size()), self.args.cuda))
-#                    #avg_f1_weighted = Variable(cuda(torch.zeros(f1_weighted.size()), self.args.cuda))
-                    
+                else :                     
                     avg_accuracy = accuracy
                     avg_accuracy_fixed = accuracy_fixed
 #                    avg_auc_macro = auc_macro
 #                    avg_auc_micro = auc_micro
                     #avg_auc_weighted = auc_weighted
                     avg_precision_macro = precision_macro
-                    avg_precision_micro = precision_micro
+                    #avg_precision_micro = precision_micro
                     avg_precision_fixed_macro = precision_fixed_macro
-                    avg_precision_fixed_micro = precision_fixed_micro
+                    #avg_precision_fixed_micro = precision_fixed_micro
                     #avg_precision_weighted = precision_weighted
                     avg_recall_macro = recall_macro
-                    avg_recall_micro = recall_micro
+                    #avg_recall_micro = recall_micro
                     avg_recall_fixed_macro = recall_fixed_macro
-                    avg_recall_fixed_micro = recall_fixed_micro
+                    #avg_recall_fixed_micro = recall_fixed_micro
                     #avg_recall_weighted = recall_weighted
                     avg_f1_macro = f1_macro
                     avg_f1_micro = f1_micro
@@ -433,31 +419,31 @@ class Solver(object):
                     avg_vmi_fidel = vmi_fidel
                     avg_vmi_fidel_fixed = vmi_fidel_fixed
                     
-                if self.global_iter % 1000 == 0 :
-                #     print('i:{} IZY:{:.2f} IZX:{:.2f}'.format(idx+1, izy_bound.item(), izx_bound.item()), end=' ')
-                #     print('acc:{:.4f} avg_acc:{:.4f}'.format(accuracy.item(), avg_accuracy.item()), end=' ')
-                #     print('err:{:.4f} avg_err:{:.4f}'.format(1-accuracy.item(), 1-avg_accuracy.item()))
-
-                    print('\n\n[TRAINING RESULT]\n')
-                    #print("logit", logit)
-                    #print("y_class", y_class)
-                    #print("prediction", prediction)
-                    #tab = pd.crosstab(y_class, prediction)
-                    #print(tab, end = "\n")
-                    print('epoch {} Time since {}'.format(self.global_epoch, timeSince(self.start)), end = "\n")
-                    print('global iter {}'.format(self.global_iter), end = "\n")
-                    print('i:{} IZY:{:.2f} IZX:{:.2f}'
-                            .format(idx+1, izy_bound.item(), izx_bound.item()), end = '\n')
-                    print('acc:{:.4f} avg_acc:{:.4f}'
-                            .format(accuracy.item(), avg_accuracy.item()), end = '\n')
-                    print('acc_fixed:{:.4f} avg_acc_fixed:{:.4f}'
-                            .format(accuracy_fixed.item(), avg_accuracy_fixed.item()), end='\n')
-                    print('vmi:{:.4f} avg_vmi:{:.4f}'
-                            .format(vmi_fidel.item(), avg_vmi_fidel.item()), end = '\n')
-                    print('vmi_fixed:{:.4f} avg_vmi_fixed:{:.4f}'
-                            .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
-                    print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
-                            .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')
+                #if self.global_iter % 1000 == 0 :
+                ##     print('i:{} IZY:{:.2f} IZX:{:.2f}'.format(idx+1, izy_bound.item(), izx_bound.item()), end=' ')
+                ##     print('acc:{:.4f} avg_acc:{:.4f}'.format(accuracy.item(), avg_accuracy.item()), end=' ')
+                ##     print('err:{:.4f} avg_err:{:.4f}'.format(1-accuracy.item(), 1-avg_accuracy.item()))
+#
+#                    print('\n\n[TRAINING RESULT]\n')
+#                    #print("logit", logit)
+#                    #print("y_class", y_class)
+#                    #print("prediction", prediction)
+#                    #tab = pd.crosstab(y_class, prediction)
+#                    #print(tab, end = "\n")
+#                    print('epoch {} Time since {}'.format(self.global_epoch, timeSince(self.start)), end = "\n")
+#                    print('global iter {}'.format(self.global_iter), end = "\n")
+#                    print('i:{} IZY:{:.2f} IZX:{:.2f}'
+#                            .format(idx+1, izy_bound.item(), izx_bound.item()), end = '\n')
+#                    print('acc:{:.4f} avg_acc:{:.4f}'
+#                            .format(accuracy.item(), avg_accuracy.item()), end = '\n')
+#                    print('acc_fixed:{:.4f} avg_acc_fixed:{:.4f}'
+#                            .format(accuracy_fixed.item(), avg_accuracy_fixed.item()), end='\n')
+#                    print('vmi:{:.4f} avg_vmi:{:.4f}'
+#                            .format(vmi_fidel.item(), avg_vmi_fidel.item()), end = '\n')
+#                    print('vmi_fixed:{:.4f} avg_vmi_fixed:{:.4f}'
+#                            .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
+#                    print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
+#                            .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')
 ##                    print('auc_macro:{:.4f} avg_auc_macro:{:.4f}'
 ##                            .format(auc_macro.item(), avg_auc_macro.item()), end = '\n')   
 ##                    print('auc_micro:{:.4f} avg_auc_micro:{:.4f}'
@@ -489,7 +475,7 @@ class Solver(object):
 #                    print('f1_micro_zeropadded:{:.4f}'
 #                            .format(f1_micro_zeropadded.item()), end = '\n') 
             
-                if self.global_iter % 10 == 0 :
+                if self.global_iter % 100 == 0 :
                     if self.tensorboard :
                         self.tf.add_scalars(main_tag='performance/accuracy',
                                             tag_scalar_dict={
@@ -515,18 +501,18 @@ class Solver(object):
                                                 'train_multi-shot':avg_vmi_fidel_fixed.item()
                                                 },
                                             global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/accuracy_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':accuracy_zeropadded.item()#,
-                                                #'train_multi-shot':avg_accuracy_zeropadded.item()
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/vmi_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':vmi_zeropadded.item()#,
-                                                #'train_multi-shot':avg_accuracy_zeropadded.item()
-                                                },
-                                            global_step=self.global_iter)
+#                        self.tf.add_scalars(main_tag='performance/accuracy_zeropadded',
+#                                            tag_scalar_dict={
+#                                                'train_one-shot':accuracy_zeropadded.item()#,
+#                                                #'train_multi-shot':avg_accuracy_zeropadded.item()
+#                                                },
+#                                            global_step=self.global_iter)
+#                        self.tf.add_scalars(main_tag='performance/vmi_zeropadded',
+#                                            tag_scalar_dict={
+#                                                'train_one-shot':vmi_zeropadded.item()#,
+#                                                #'train_multi-shot':avg_accuracy_zeropadded.item()
+#                                                },
+#                                            global_step=self.global_iter)
 #                        self.tf.add_scalars(main_tag='performance/error',
 #                                            tag_scalar_dict={
 #                                                'train_one-shot':1-accuracy.item(),
@@ -549,48 +535,48 @@ class Solver(object):
                                                 'train_multi-shot':avg_precision_macro.item()
                                                 },
                                             global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/precision_micro',
-                                            tag_scalar_dict={
-                                                'train_one-shot':precision_micro.item(),
-                                                'train_multi-shot':avg_precision_micro.item()
-                                                },
-                                            global_step=self.global_iter)
+#                        self.tf.add_scalars(main_tag='performance/precision_micro',
+#                                            tag_scalar_dict={
+#                                                'train_one-shot':precision_micro.item(),
+#                                                'train_multi-shot':avg_precision_micro.item()
+#                                                },
+#                                            global_step=self.global_iter)
                         self.tf.add_scalars(main_tag='performance/precision_fixed_macro',
                                             tag_scalar_dict={
                                                 'train_one-shot':precision_fixed_macro.item(),
                                                 'train_multi-shot':avg_precision_fixed_macro.item()
                                                 },
                                             global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/precision_fixed_micro',
-                                            tag_scalar_dict={
-                                                'train_one-shot':precision_fixed_micro.item(),
-                                                'train_multi-shot':avg_precision_fixed_micro.item()
-                                                },
-                                            global_step=self.global_iter)
+ #                       self.tf.add_scalars(main_tag='performance/precision_fixed_micro',
+ #                                           tag_scalar_dict={
+ #                                               'train_one-shot':precision_fixed_micro.item(),
+ #                                               'train_multi-shot':avg_precision_fixed_micro.item()
+ #                                               },
+ #                                           global_step=self.global_iter)
                         self.tf.add_scalars(main_tag='performance/recall_macro',
                                             tag_scalar_dict={
                                                 'train_one-shot':recall_macro.item(),
                                                 'train_multi-shot':avg_recall_macro.item()
                                                 },
                                             global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/recall_micro',
-                                            tag_scalar_dict={
-                                                'train_one-shot':recall_micro.item(),
-                                                'train_multi-shot':avg_recall_micro.item()
-                                                },
-                                            global_step=self.global_iter)
+#                        self.tf.add_scalars(main_tag='performance/recall_micro',
+#                                            tag_scalar_dict={
+#                                                'train_one-shot':recall_micro.item(),
+#                                                'train_multi-shot':avg_recall_micro.item()
+#                                                },
+#                                            global_step=self.global_iter)
                         self.tf.add_scalars(main_tag='performance/recall_fixed_macro',
                                             tag_scalar_dict={
                                                 'train_one-shot':recall_fixed_macro.item(),
                                                 'train_multi-shot':avg_recall_fixed_macro.item()
                                                 },
                                             global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/recall_fixed_micro',
-                                            tag_scalar_dict={
-                                                'train_one-shot':recall_fixed_micro.item(),
-                                                'train_multi-shot':avg_recall_fixed_micro.item()
-                                                },
-                                            global_step=self.global_iter)
+ #                       self.tf.add_scalars(main_tag='performance/recall_fixed_micro',
+ #                                           tag_scalar_dict={
+ #                                               'train_one-shot':recall_fixed_micro.item(),
+ #                                               'train_multi-shot':avg_recall_fixed_micro.item()
+ #                                               },
+ #                                           global_step=self.global_iter)
                         self.tf.add_scalars(main_tag='performance/f1_macro',
                                             tag_scalar_dict={
                                                 'train_one-shot':f1_macro.item(),
@@ -615,43 +601,6 @@ class Solver(object):
                                                 'train_multi-shot':avg_f1_fixed_micro.item()
                                                 },
                                             global_step=self.global_iter)                          
-                        self.tf.add_scalars(main_tag='performance/precision_macro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':precision_macro_zeropadded#,
-                                                #'train_multi-shot':avg_precision_macro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/precision_micro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':precision_micro_zeropadded#,
-                                                #'train_multi-shot':avg_precision_micro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/recall_macro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':recall_macro_zeropadded#,
-                                                #'train_multi-shot':avg_recall_macro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/recall_micro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':recall_micro_zeropadded#,
-                                                #'train_multi-shot':avg_recall_micro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/f1_macro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':f1_macro_zeropadded#,
-                                                #'train_multi-shot':avg_f1_macro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                        self.tf.add_scalars(main_tag='performance/f1_micro_zeropadded',
-                                            tag_scalar_dict={
-                                                'train_one-shot':f1_micro_zeropadded#,
-                                                #'train_multi-shot':avg_f1_micro_zeropadded
-                                                },
-                                            global_step=self.global_iter)
-                
                         self.tf.add_scalars(main_tag='performance/cost',
                                             tag_scalar_dict={
                                                 'train_one-shot_class':class_loss.item(),
@@ -664,7 +613,7 @@ class Solver(object):
                                                 'I(Z;X)':izx_bound.item()},
                                             global_step=self.global_iter)
 #%%
-            if (self.global_epoch % 2) == 0 : self.scheduler.step()
+            #if (self.global_epoch % 2) == 0 : self.scheduler.step()
             self.val()
             
             print("epoch:{}".format(e + 1))
@@ -672,7 +621,7 @@ class Solver(object):
             
         print(" [*] Training Finished!")
 
-    def val(self, test = False):
+    def val(self, test = True):
 #%%        
         self.set_mode('eval')
         #self.class_criterion_val = nn.CrossEntropyLoss()#size_average = False)
@@ -685,18 +634,6 @@ class Solver(object):
         izy_bound = 0
         izx_bound = 0
         
-        correct_zeropadded = 0
-        precision_macro_zeropadded = 0  
-        precision_micro_zeropadded = 0
-        precision_weighted_zeropadded = 0
-        recall_macro_zeropadded = 0
-        recall_micro_zeropadded = 0
-        recall_weighted_zeropadded = 0
-        f1_macro_zeropadded = 0
-        f1_micro_zeropadded = 0
-        f1_weighted_zeropadded = 0
-        
-        vmi_zeropadded_sum = 0
         vmi_fidel_sum = 0
         vmi_fidel_fixed_sum = 0
         avg_vmi_fidel_sum = 0
@@ -708,19 +645,19 @@ class Solver(object):
 #        auc_micro = 0
 #        auc_weighted = 0
         precision_macro = 0  
-        precision_micro = 0
+        #precision_micro = 0
         #precision_weighted = 0
         recall_macro = 0
-        recall_micro = 0
+        #recall_micro = 0
         #recall_weighted = 0
         f1_macro = 0
         f1_micro = 0
         #f1_weighted = 0
         precision_fixed_macro = 0  
-        precision_fixed_micro = 0
+        #precision_fixed_micro = 0
         #precision_fixed_weighted = 0
         recall_fixed_macro = 0
-        recall_fixed_micro = 0
+        #recall_fixed_micro = 0
         #recall_fixed_weighted = 0
         f1_fixed_macro = 0
         f1_fixed_micro = 0
@@ -740,10 +677,10 @@ class Solver(object):
         avg_f1_micro = 0
         #avg_f1_weighted = 0
         avg_precision_fixed_macro = 0  
-        avg_precision_fixed_micro = 0
+        #avg_precision_fixed_micro = 0
         #avg_precision_fixed_weighted = 0
         avg_recall_fixed_macro = 0
-        avg_recall_fixed_micro = 0
+        #avg_recall_fixed_micro = 0
         #avg_recall_fixed_weighted = 0
         avg_f1_fixed_macro = 0
         avg_f1_fixed_micro = 0
@@ -805,14 +742,14 @@ class Solver(object):
     #            auc_micro += roc_auc_score(y_binary, logit.detach().numpy(), average = 'micro')
     #            auc_weighted += roc_auc_score(y_binary, logit.detach().numpy(), average = 'weighted')    
                 precision_macro += precision_score(y_class, prediction, average = 'macro')  
-                precision_micro += precision_score(y_class, prediction, average = 'micro')  
+                #precision_micro += precision_score(y_class, prediction, average = 'micro')  
                 precision_fixed_macro += precision_score(y_class, prediction_fixed, average = 'macro')  
-                precision_fixed_micro += precision_score(y_class, prediction_fixed, average = 'micro')
+                #precision_fixed_micro += precision_score(y_class, prediction_fixed, average = 'micro')
 #                precision_weighted += precision_score(y_class, prediction, average = 'weighted')
                 recall_macro += recall_score(y_class, prediction, average = 'macro')
-                recall_micro += recall_score(y_class, prediction, average = 'micro')
+                #recall_micro += recall_score(y_class, prediction, average = 'micro')
                 recall_fixed_macro += recall_score(y_class, prediction_fixed, average = 'macro')
-                recall_fixed_micro += recall_score(y_class, prediction_fixed, average = 'micro')
+                #recall_fixed_micro += recall_score(y_class, prediction_fixed, average = 'micro')
 #                recall_weighted += recall_score(y_class, prediction, average = 'weighted')
                 f1_macro += f1_score(y_class, prediction, average = 'macro')
                 f1_micro += f1_score(y_class, prediction, average = 'micro')
@@ -855,33 +792,26 @@ class Solver(object):
                 # Post-hoc Accuracy (zero-padded accuracy)
                 #output_zeropadded, _, _, _ = self.net_ema.model(data_zeropadded)
                 output_original = self.black_box(x)
-                output_zeropadded = self.black_box(data_zeropadded)    
-                pred_zeropadded = F.softmax(output_zeropadded, dim=-1).max(1)[1]
-                #pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
-                correct_zeropadded += pred_zeropadded.eq(y_class).float().sum()                
-                precision_macro_zeropadded += precision_score(y_class, pred_zeropadded, average = 'macro')  
-                precision_micro_zeropadded += precision_score(y_class, pred_zeropadded, average = 'micro')  
-                precision_weighted_zeropadded += precision_score(y_class, pred_zeropadded, average = 'weighted')
-                recall_macro_zeropadded += recall_score(y_class, pred_zeropadded, average = 'macro')
-                recall_micro_zeropadded += recall_score(y_class, pred_zeropadded, average = 'micro')
-                recall_weighted_zeropadded += recall_score(y_class, pred_zeropadded, average = 'weighted')
-                f1_macro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'macro')
-                f1_micro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'micro')
-                f1_weighted_zeropadded += f1_score(y_class, pred_zeropadded, average = 'weighted')
-                
-                if idx == 0:
-                        
-                    print("seojin")
-                    print("zeropadded", pred_zeropadded)
-                    print("bb-pred", y_class)
-                    print()
+                #output_zeropadded = self.black_box(data_zeropadded)    
+                #pred_zeropadded = F.softmax(output_zeropadded, dim=-1).max(1)[1]
+                ##pred_zeropadded = output_zeropadded.max(1, keepdim=True)[1] 
+                #correct_zeropadded += pred_zeropadded.eq(y_class).float().sum()                
+                #precision_macro_zeropadded += precision_score(y_class, pred_zeropadded, average = 'macro')  
+                #precision_micro_zeropadded += precision_score(y_class, pred_zeropadded, average = 'micro')  
+                #precision_weighted_zeropadded += precision_score(y_class, pred_zeropadded, average = 'weighted')
+                #recall_macro_zeropadded += recall_score(y_class, pred_zeropadded, average = 'macro')
+                #recall_micro_zeropadded += recall_score(y_class, pred_zeropadded, average = 'micro')
+                #recall_weighted_zeropadded += recall_score(y_class, pred_zeropadded, average = 'weighted')
+                #f1_macro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'macro')
+                #f1_micro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'micro')
+                #f1_weighted_zeropadded += f1_score(y_class, pred_zeropadded, average = 'weighted')
         
                 ## Variational Mutual Information                           
-                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                              out=None), dim = -1)
-                vmi_zeropadded_sum += vmi.sum()
+                #vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                #                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                #                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                #                              out=None), dim = -1)
+                #vmi_zeropadded_sum += vmi.sum()
                 vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
                                               tensor1 = torch.exp(output_original).type(torch.FloatTensor),
                                               tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
@@ -911,20 +841,20 @@ class Solver(object):
     #                avg_auc_micro += roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'micro')
     #                avg_auc_weighted += roc_auc_score(y_binary, avg_soft_logit.detach().numpy(), average = 'weighted') 
                     avg_precision_macro += precision_score(y_class, avg_prediction, average = 'macro')  
-                    avg_precision_micro += precision_score(y_class, avg_prediction, average = 'micro')  
+                    #avg_precision_micro += precision_score(y_class, avg_prediction, average = 'micro')  
                     #avg_precision_weighted += precision_score(y_class, avg_prediction, average = 'weighted')
                     avg_recall_macro += recall_score(y_class, avg_prediction, average = 'macro')
-                    avg_recall_micro += recall_score(y_class, avg_prediction, average = 'micro')
+                    #avg_recall_micro += recall_score(y_class, avg_prediction, average = 'micro')
                     #avg_recall_weighted += recall_score(y_class, avg_prediction, average = 'weighted')
                     avg_f1_macro += f1_score(y_class, avg_prediction, average = 'macro')
                     avg_f1_micro += f1_score(y_class, avg_prediction, average = 'micro')
                     #avg_f1_weighted += f1_score(y_class, avg_prediction, average = 'weighted') 
                     
                     avg_precision_fixed_macro += precision_score(y_class, avg_prediction_fixed, average = 'macro')  
-                    avg_precision_fixed_micro += precision_score(y_class, avg_prediction_fixed, average = 'micro')  
+                    #avg_precision_fixed_micro += precision_score(y_class, avg_prediction_fixed, average = 'micro')  
                     #avg_precision_fixed_weighted += precision_score(y_class, avg_prediction_fixed, average = 'weighted')
                     avg_recall_fixed_macro += recall_score(y_class, avg_prediction_fixed, average = 'macro')
-                    avg_recall_fixed_micro += recall_score(y_class, avg_prediction_fixed, average = 'micro')
+                    #avg_recall_fixed_micro += recall_score(y_class, avg_prediction_fixed, average = 'micro')
                     #avg_recall_fixed_weighted += recall_score(y_class, avg_prediction_fixed, average = 'weighted')
                     avg_f1_fixed_macro += f1_score(y_class, avg_prediction_fixed, average = 'macro')
                     avg_f1_fixed_micro += f1_score(y_class, avg_prediction_fixed, average = 'micro')
@@ -964,17 +894,18 @@ class Solver(object):
                     #avg_auc_micro = auc_micro
                     #avg_auc_weighted = auc_weighted
                     avg_precision_macro = precision_macro
-                    avg_precision_micro = precision_micro
+                    #avg_precision_micro = precision_micro
                     #avg_precision_weighted = precision_weighted
                     avg_recall_macro = recall_macro
-                    avg_recall_micro = recall_micro
+                    #avg_recall_micro = recall_micro
                     #avg_recall_weighted = recall_weighted
                     avg_f1_macro = f1_macro
                     avg_f1_micro = f1_micro
                     #avg_f1_weighted = f1_weighted
                     
+                    avg_precision_fixed_macro = precision_fixed_macro
                     avg_recall_fixed_macro = recall_fixed_macro
-                    avg_recall_fixed_micro = recall_fixed_micro
+                    #avg_recall_fixed_micro = recall_fixed_micro
                     #avg_recall_fixed_weighted = recall_fixed_weighted
                     avg_f1_fixed_macro = f1_fixed_macro
                     avg_f1_fixed_micro = f1_fixed_micro
@@ -984,9 +915,9 @@ class Solver(object):
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
                 
                 #%% save image #
-                if (self.global_iter > 4999 and self.global_epoch % 5 == 0) or self.global_epoch is self.epoch:
+                if self.global_epoch % 5 == 0 or self.global_epoch is self.epoch:
                     #print("SAVED!!!!")
-                    if (not test) and (idx == 0 or idx == 200):
+                    if (idx < 3):
         
                         # filename
                         img_name, _ = os.path.splitext(self.checkpoint_name)
@@ -1015,17 +946,7 @@ class Solver(object):
 #%%    
             ## Post-hoc Accuracy (zero-padded accuracy)
             accuracy_zeropadded = correct_zeropadded/total_num_ind
-            precision_macro_zeropadded = precision_macro_zeropadded/total_num
-            precision_micro_zeropadded = precision_micro_zeropadded/total_num
-            precision_weighted_zeropadded = precision_weighted_zeropadded/total_num
-            recall_macro_zeropadded = recall_macro_zeropadded/total_num
-            recall_micro_zeropadded = recall_micro_zeropadded/total_num
-            recall_weighted_zeropadded = recall_weighted_zeropadded/total_num
-            f1_macro_zeropadded = f1_macro_zeropadded/total_num
-            f1_micro_zeropadded = f1_micro_zeropadded/total_num
-            f1_weighted_zeropadded = f1_weighted_zeropadded/total_num
 
-            vmi_zeropadded = vmi_zeropadded_sum/total_num_ind
             vmi_fidel = vmi_fidel_sum/total_num_ind
             vmi_fidel_fixed = vmi_fidel_fixed_sum/total_num_ind
             avg_vmi_fidel = avg_vmi_fidel_sum/total_num_ind
@@ -1040,20 +961,16 @@ class Solver(object):
     #        auc_micro = auc_micro/total_num
     #        auc_weighted = auc_weighted/total_num
             precision_macro = precision_macro/total_num
-            precision_micro = precision_micro/total_num
             #precision_weighted = precision_weighted/total_num
             recall_macro = recall_macro/total_num
-            recall_micro = recall_micro/total_num
             #recall_weighted = recall_weighted/total_num
             f1_macro = f1_macro/total_num
             f1_micro = f1_micro/total_num
             #f1_weighted = f1_weighted/total_num
             
             precision_fixed_macro = precision_fixed_macro/total_num
-            precision_fixed_micro = precision_fixed_micro/total_num
             #precision_fixed_weighted = precision_fixed_weighted/total_num
             recall_fixed_macro = recall_fixed_macro/total_num
-            recall_fixed_micro = recall_fixed_micro/total_num
             #recall_fixed_weighted = recall_fixed_weighted/total_num
             f1_fixed_macro = f1_fixed_macro/total_num
             f1_fixed_micro = f1_fixed_micro/total_num
@@ -1063,20 +980,16 @@ class Solver(object):
     #        avg_auc_micro = avg_auc_micro/total_num
     #        avg_auc_weighted = avg_auc_weighted/total_num
             avg_precision_macro = avg_precision_macro/total_num
-            avg_precision_micro = avg_precision_micro/total_num
             #avg_precision_weighted = avg_precision_weighted/total_num
             avg_recall_macro = avg_recall_macro/total_num
-            avg_recall_micro = avg_recall_micro/total_num
             #avg_recall_weighted = avg_recall_weighted/total_num
             avg_f1_macro = avg_f1_macro/total_num
             avg_f1_micro = avg_f1_micro/total_num
             #avg_f1_weighted = avg_f1_weighted/total_num
             
             avg_precision_fixed_macro = avg_precision_fixed_macro/total_num
-            avg_precision_fixed_micro = avg_precision_fixed_micro/total_num
             #avg_precision_fixed_weighted = avg_precision_fixed_weighted/total_num
             avg_recall_fixed_macro = avg_recall_fixed_macro/total_num
-            avg_recall_fixed_micro = avg_recall_fixed_micro/total_num
             #avg_recall_fixed_weighted = avg_recall_fixed_weighted/total_num
             avg_f1_fixed_macro = avg_f1_fixed_macro/total_num
             avg_f1_fixed_micro = avg_f1_fixed_micro/total_num
@@ -1087,105 +1000,7 @@ class Solver(object):
             total_loss /= total_num
             izy_bound = math.log(10,2) - class_loss
             izx_bound = info_loss
-            
-            print('\n\n[VAL RESULT]\n')
-            #tab = pd.crosstab(y_class, prediction)
-            #print(tab, end = "\n")
-            print('epoch {}'.format(self.global_epoch), end = "\n") 
-            print('global iter {}'.format(self.global_iter), end = "\n")                   
-            print('IZY:{:.2f} IZX:{:.2f}'
-                    .format(izy_bound.item(), izx_bound.item()), end = '\n')
-            print('acc:{:.4f} avg_acc:{:.4f}'
-                    .format(accuracy.item(), avg_accuracy.item()), end = '\n')          
-            print('acc_fixed:{:.4f} avg_acc_fixed:{:.4f}'
-                    .format(accuracy_fixed.item(), avg_accuracy_fixed.item()), end='\n')
-            print('vmi:{:.4f} avg_vmi:{:.4f}'
-                    .format(vmi_fidel.item(), avg_vmi_fidel.item()), end = '\n')
-            print('vmi_fixed:{:.4f} avg_vmi_fixed:{:.4f}'
-                    .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
-            print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
-                    .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')                 
-#    #        print('auc_macro:{:.4f} avg_auc_macro:{:.4f}'
-#    #                .format(auc_macro.item(), avg_auc_macro.item()), end = '\n')   
-#    #        print('auc_micro:{:.4f} avg_auc_micro:{:.4f}'
-#    #                .format(auc_micro.item(), avg_auc_micro.item()), end = '\n')     
-#            print('precision_macro:{:.4f} avg_precision_macro:{:.4f}'
-#                    .format(precision_macro, avg_precision_macro), end = '\n') 
-#            print('precision_micro:{:.4f} avg_precision_micro:{:.4f}'
-#                    .format(precision_micro, avg_precision_micro), end = '\n')
-#            print('recall_macro:{:.4f} avg_recall_macro:{:.4f}'
-#                    .format(recall_macro, avg_recall_macro), end = '\n')   
-#            print('recall_micro:{:.4f} avg_recall_micro:{:.4f}'
-#                    .format(recall_micro, avg_recall_micro), end = '\n') 
-#            print('f1_macro:{:.4f} avg_f1_macro:{:.4f}'
-#                    .format(f1_macro, avg_f1_macro), end = '\n')   
-#            print('f1_micro:{:.4f} avg_f1_micro:{:.4f}'
-#                    .format(f1_micro, avg_f1_micro), end = '\n') 
-#            print('precision_macro_zeropadded:{:.4f}'
-#                    .format(precision_macro_zeropadded), end = '\n')
-#            print('precision_micro_zeropadded:{:.4f}'
-#                    .format(precision_micro_zeropadded), end = '\n')
-#            print('recall_macro_zeropadded:{:.4f}'
-#                    .format(recall_macro_zeropadded), end = '\n')   
-#            print('recall_micro_zeropadded:{:.4f}'
-#                    .format(recall_micro_zeropadded), end = '\n') 
-#            print('f1_macro_zeropadded:{:.4f}'
-#                    .format(f1_macro_zeropadded), end = '\n')   
-#            print('f1_micro_zeropadded:{:.4f}'
-#                    .format(f1_micro_zeropadded), end = '\n') 
-            
-            print()
-#%%                
-#             if self.history['avg_acc'] < avg_accuracy.item() :
-                
-#                 self.history['class_loss'] = class_loss.item()
-#                 self.history['info_loss'] = info_loss.item()
-#                 self.history['total_loss'] = total_loss.item()
-#                 self.history['epoch'] = self.global_epoch
-#                 self.history['iter'] = self.global_iter
 
-#                 self.history['avg_acc'] = avg_accuracy.item()
-#                 self.history['avg_acc_fixed'] = avg_accuracy_fixed.item()
-#     #            self.history['avg_auc_macro'] = avg_auc_macro.item()
-#     #            self.history['avg_auc_micro'] = avg_auc_micro.item()
-#     #            self.history['avg_auc_weighted'] = avg_auc_weighted.item()
-#                 self.history['avg_precision_macro'] = avg_precision_macro
-#                 self.history['avg_precision_micro'] = avg_precision_micro
-#                 #self.history['avg_precision_weighted'] = avg_precision_weighted
-#                 self.history['avg_recall_macro'] = avg_recall_macro
-#                 self.history['avg_recall_micro'] = avg_recall_micro
-#                 #self.history['avg_recall_weighted'] = avg_recall_weighted
-#                 self.history['avg_f1_macro'] = avg_f1_macro
-#                 self.history['avg_f1_micro'] = avg_f1_micro
-#                 #self.history['avg_f1_weighted'] = avg_f1_weighted
-
-#                 self.history['avg_precision_fixed_macro'] = avg_precision_fixed_macro
-#                 self.history['avg_precision_fixed_micro'] = avg_precision_fixed_micro
-#                 #self.history['avg_precision_fixed_weighted'] = avg_precision_fixed_weighted
-#                 self.history['avg_recall_fixed_macro'] = avg_recall_fixed_macro
-#                 self.history['avg_recall_fixed_micro'] = avg_recall_fixed_micro
-#                 #self.history['avg_recall_fixed_weighted'] = avg_recall_fixed_weighted
-#                 self.history['avg_f1_fixed_macro'] = avg_f1_fixed_macro
-#                 self.history['avg_f1_fixed_micro'] = avg_f1_fixed_micro
-#                 #self.history['avg_f1_fixed_weighted'] = avg_f1_fixed_weighted
-                
-#                 self.history['acc_zeropadded'] = accuracy_zeropadded.item()
-#                 self.history['precision_macro_zeropadded'] = precision_macro_zeropadded.item()
-#                 self.history['precision_micro_zeropadded'] = precision_micro_zeropadded.item()
-#                 #self.history['precision_weighted_zeropadded'] = precision_weighted_zeropadded.item()
-#                 self.history['recall_macro_zeropadded'] = recall_macro_zeropadded.item()
-#                 self.history['recall_micro_zeropadded'] = recall_micro_zeropadded.item()
-# #                self.history['recall_weighted_zeropadded'] = recall_weighted_zeropadded.item()
-#                 self.history['f1_macro_zeropadded'] = f1_macro_zeropadded.item()
-#                 self.history['f1_micro_zeropadded'] = f1_micro_zeropadded.item()
-# #                self.history['f1_weighted_zeropadded'] = f1_weighted_zeropadded.item()
-#                 self.history['vmi_zeropadded'] = vmi_zeropadded.item()
-#                 self.history['avg_vmi'] = avg_vmi_fidel.item()
-#                 self.history['avg_vmi_fixed'] = avg_vmi_fidel_fixed.item()            
-            
-#                 # if save_checkpoint : self.save_checkpoint('best_acc.tar')
-#                 if not test : self.save_checkpoint(self.checkpoint_name)
-                
             if self.tensorboard :
                 self.tf.add_scalars(main_tag='performance/accuracy',
                                     tag_scalar_dict={
@@ -1212,19 +1027,6 @@ class Solver(object):
                                         data_type + '_multi-shot':avg_vmi_fidel_fixed.item()
                                         },
                                     global_step=self.global_iter)
-
-                self.tf.add_scalars(main_tag='performance/accuracy_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':accuracy_zeropadded.item()#,
-                                        #data_type + '_multi-shot':accuracy_zeropadded.item()
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/vmi_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':vmi_zeropadded.item()#,
-                                        #'train_multi-shot':avg_accuracy_zeropadded.item()
-                                        },
-                                    global_step=self.global_iter)    
 #                self.tf.add_scalars(main_tag='performance/error',
 #                                    tag_scalar_dict={
 #                                        data_type + '_one-shot':1-accuracy.item(),
@@ -1247,22 +1049,10 @@ class Solver(object):
                                         data_type + '_multi-shot':avg_precision_macro
                                         },
                                     global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/precision_micro',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':precision_micro,
-                                        data_type + '_multi-shot':avg_precision_micro
-                                        },
-                                    global_step=self.global_iter)
                 self.tf.add_scalars(main_tag='performance/recall_macro',
                                     tag_scalar_dict={
                                         data_type + '_one-shot':recall_macro,
                                         data_type + '_multi-shot':avg_recall_macro
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/recall_micro',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':recall_micro,
-                                        data_type + '_multi-shot':avg_recall_micro
                                         },
                                     global_step=self.global_iter)
                 self.tf.add_scalars(main_tag='performance/f1_macro',
@@ -1284,22 +1074,10 @@ class Solver(object):
                                         data_type + '_multi-shot':avg_precision_fixed_macro
                                         },
                                     global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/precision_fixed_micro',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':precision_fixed_micro,
-                                        data_type + '_multi-shot':avg_precision_fixed_micro
-                                        },
-                                    global_step=self.global_iter)
                 self.tf.add_scalars(main_tag='performance/recall_fixed_macro',
                                     tag_scalar_dict={
                                         data_type + '_one-shot':recall_fixed_macro,
                                         data_type + '_multi-shot':avg_recall_fixed_macro
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/recall_fixed_micro',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':recall_fixed_micro,
-                                        data_type + '_multi-shot':avg_recall_fixed_micro
                                         },
                                     global_step=self.global_iter)
                 self.tf.add_scalars(main_tag='performance/f1_fixed_macro',
@@ -1313,45 +1091,7 @@ class Solver(object):
                                         data_type + '_one-shot':f1_fixed_micro,
                                         data_type + '_multi-shot':avg_f1_fixed_micro
                                         },
-                                    global_step=self.global_iter)
-                
-                self.tf.add_scalars(main_tag='performance/precision_macro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':precision_macro_zeropadded#,
-                                        #data_type + '_multi-shot':precision_macro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/precision_micro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':precision_micro_zeropadded#,
-                                        #data_type + '_multi-shot':precision_micro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/recall_macro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':recall_macro_zeropadded#,
-                                        #data_type + '_multi-shot':recall_macro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/recall_micro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':recall_micro_zeropadded#,
-                                        #data_type + '_multi-shot':recall_micro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/f1_macro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':f1_macro_zeropadded#,
-                                        #data_type + '_multi-shot':f1_macro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                self.tf.add_scalars(main_tag='performance/f1_micro_zeropadded',
-                                    tag_scalar_dict={
-                                        data_type + '_one-shot':f1_micro_zeropadded#,
-                                        #data_type + '_multi-shot':f1_micro_zeropadded
-                                        },
-                                    global_step=self.global_iter)
-                
+                                    global_step=self.global_iter)         
                 self.tf.add_scalars(main_tag='performance/cost',
                                     tag_scalar_dict={
                                         data_type + '_one-shot_class':class_loss.item(),
