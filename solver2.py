@@ -62,6 +62,7 @@ class Solver(object):
             self.chunk_size = self.args.chunk_size
             assert np.remainder(self.original_nrow, self.chunk_size) == 0
             self.filter_size = (self.chunk_size, self.chunk_size)
+            self.idx_list = [0, 1, 2]
             
             ## load black box model
             from mnist.original import Net
@@ -90,7 +91,8 @@ class Solver(object):
             self.chunk_size = self.args.chunk_size
             if self.chunk_size > self.original_ncol: self.chunk_size = self.original_ncol
             self.filter_size = (1, self.chunk_size)
-
+            self.idx_list = [0, 200]
+            
             ## load black box model
             
             from imdb.original import Net
@@ -918,7 +920,7 @@ class Solver(object):
                 #%% save image #
                 if self.save_image and (self.global_epoch % 5 == 0 or self.global_epoch is self.epoch):
                     #print("SAVED!!!!")
-                    if (idx < 3):
+                    if idx in self.idx_list:
         
                         # filename
                         img_name, _ = os.path.splitext(self.checkpoint_name)
