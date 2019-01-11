@@ -26,6 +26,7 @@ class Solver(object):
         self.args = args
         self.dataset = args.dataset
         self.epoch = args.epoch
+        self.save_image = args.save_image
         self.batch_size = args.batch_size
         self.lr = args.lr # learning rate
         self.beta = args.beta
@@ -61,6 +62,7 @@ class Solver(object):
             self.chunk_size = self.args.chunk_size
             assert np.remainder(self.original_nrow, self.chunk_size) == 0
             self.filter_size = (self.chunk_size, self.chunk_size)
+            self.idx_list = [0, 1, 2]
             
             ## load black box model
             from mnist.original import Net
@@ -89,7 +91,8 @@ class Solver(object):
             self.chunk_size = self.args.chunk_size
             if self.chunk_size > self.original_ncol: self.chunk_size = self.original_ncol
             self.filter_size = (1, self.chunk_size)
-
+            self.idx_list = [0, 200]
+            
             ## load black box model
             
             from imdb.original import Net
@@ -489,7 +492,7 @@ class Solver(object):
 #                    print('f1_micro_zeropadded:{:.4f}'
 #                            .format(f1_micro_zeropadded.item()), end = '\n') 
             
-                if self.global_iter % 10 == 0 :
+                if self.global_iter % 1000 == 0 :
                     if self.tensorboard :
                         self.tf.add_scalars(main_tag='performance/accuracy',
                                             tag_scalar_dict={
@@ -868,13 +871,6 @@ class Solver(object):
                 f1_macro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'macro')
                 f1_micro_zeropadded += f1_score(y_class, pred_zeropadded, average = 'micro')
                 f1_weighted_zeropadded += f1_score(y_class, pred_zeropadded, average = 'weighted')
-                
-                if idx == 0:
-                        
-                    print("seojin")
-                    print("zeropadded", pred_zeropadded)
-                    print("bb-pred", y_class)
-                    print()
         
                 ## Variational Mutual Information                           
                 vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
@@ -984,9 +980,9 @@ class Solver(object):
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
                 
                 #%% save image #
-                if (self.global_iter > 4999 and self.global_epoch % 5 == 0) or self.global_epoch is self.epoch:
+                if args.save_image and (self.global_epoch % 5 == 0):
                     #print("SAVED!!!!")
-                    if (not test) and (idx == 0 or idx == 200):
+                    if idx in self.idx_list: #(idx == 0 or idx == 200):
         
                         # filename
                         img_name, _ = os.path.splitext(self.checkpoint_name)
