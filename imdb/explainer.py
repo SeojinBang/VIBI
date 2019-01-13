@@ -107,9 +107,9 @@ class Explainer(nn.Module):
             self.concat_level = nn.Sequential(
                     #nn.Dropout(p = 0.2),
                     nn.Linear(in_features = self.num_wordlevel_explainer * 2, out_features = 1),
-                    nn.ReLU(True),
+                    #nn.ReLU(True),
                     #nn.Linear(in_features = 50, out_features = 1)
-                    nn.LogSoftmax(-1)
+                    nn.LogSoftmax(1)
                     )
 
         ## paramters for approximater
@@ -222,8 +222,8 @@ class Explainer(nn.Module):
             ## combined 
             combined = Concatenate(encoded_review_global, encoded_review_local) # should be (10, 15, 150)
             logits_T = TimeDistributed(self.sent_encoder_combined)(combined).squeeze(-1) # orch.Size([100, 15])
-        
-        if self.chunk_size == 1:
+
+        elif self.chunk_size == 1:
 
             encoded_words = embeded_words.view(-1, self.max_num_sents * self.max_num_words, self.embedding_dim, 1).squeeze(-1)
             encoded_words = self.word_level(encoded_words)[0] 
@@ -234,13 +234,9 @@ class Explainer(nn.Module):
         else:
             
             encoded_words = self.word_level(embeded_words.view(-1, 1, self.max_num_words * self.embedding_dim))
-
-            encoded_sent = self.sent_level(encoded_words).view(-1, 1, self.num_wordlevel_explainer)
-            encoded_sent = encoded_sent.expand(encoded_words.size(0), encoded_words.size(2), encoded_words.size(1)) ## 1500, 25
-            
+            encoded_sent = self.sent_level(encoded_words).view(-1, 1, self.num_wordlevel_explainer).expand(encoded_words.size(0), encoded_words.size(2), encoded_words.size(1)) ## 750, 46, 25
             logits_T = self.concat_level(torch.cat((encoded_words.permute(0, 2, 1), encoded_sent), -1)).squeeze(-1).view(-1, self.max_num_sents * encoded_sent.size(-2))
 
-#            #%%
 #            ### word level 
 #            encoded_words0 = self.word_level(embeded_words.view(-1, 1, self.max_num_words * self.embedding_dim))
 #    
