@@ -53,8 +53,8 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
     
-    parser.add_argument('--filename', default = 'None', type = str, help='File name')
-    parser.add_argument('--result_dir', default = './result', type = str, help='Result directory path')
+    parser.add_argument('--filename', type = str, help='File name')
+    parser.add_argument('--result_dir', type = str, help='Result directory path')
 
     args = parser.parse_args()
     
