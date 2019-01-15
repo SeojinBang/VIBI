@@ -251,17 +251,17 @@ class Solver(object):
                 self.optim.step()
                 self.net_ema.update(self.net.state_dict())
 
-                # selected chunk index
-                _, index_chunk = log_p_i.unsqueeze(1).topk(self.args.K, dim = -1)
+#                 # selected chunk index
+#                 _, index_chunk = log_p_i.unsqueeze(1).topk(self.args.K, dim = -1)
 
-                if self.chunk_size is not 1:
+#                 if self.chunk_size is not 1:
                     
-                    index_chunk = index_transfer(dataset = self.dataset,
-                                                 idx = index_chunk, 
-                                                 filter_size = self.filter_size,
-                                                 original_nrow = self.original_nrow,
-                                                 original_ncol = self.original_ncol, 
-                                                 is_cuda = self.cuda).output
+#                     index_chunk = index_transfer(dataset = self.dataset,
+#                                                  idx = index_chunk, 
+#                                                  filter_size = self.filter_size,
+#                                                  original_nrow = self.original_nrow,
+#                                                  original_ncol = self.original_ncol, 
+#                                                  is_cuda = self.cuda).output
                 
                 if self.global_iter % 1000 == 0 :
                     
