@@ -703,7 +703,7 @@ class Solver(object):
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
                 
                 #%% save image #
-                if self.save_image and (self.global_epoch % 5 == 0 and self.global_epoch > 10):
+                if self.save_image and (self.global_epoch % 5 == 0 and self.global_epoch > 50):
                     #print("SAVED!!!!")
                     if idx in self.idx_list: #(idx == 0 or idx == 200):
         
