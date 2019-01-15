@@ -251,23 +251,6 @@ class Solver(object):
                 self.optim.step()
                 self.net_ema.update(self.net.state_dict())
 
-                prediction = torch.argmax(logit, dim = -1)
-                accuracy = torch.eq(prediction, y_class).float().mean() 
-                prediction_fixed = torch.argmax(logit_fixed, dim = -1)
-                accuracy_fixed = torch.eq(prediction_fixed, y_class).float().mean()
-                precision_macro = precision_score(y_class, prediction, average = 'macro')  
-#                precision_micro = precision_score(y_class, prediction, average = 'micro')  
-                precision_fixed_macro = precision_score(y_class, prediction_fixed, average = 'macro') 
-#                precision_fixed_micro = precision_score(y_class, prediction_fixed, average = 'micro')  
-                recall_macro = recall_score(y_class, prediction, average = 'macro')
-#                recall_micro = recall_score(y_class, prediction, average = 'micro')
-                recall_fixed_macro = recall_score(y_class, prediction_fixed, average = 'macro')
-#                recall_fixed_micro = recall_score(y_class, prediction_fixed, average = 'micro')        
-                f1_macro = f1_score(y_class, prediction, average = 'macro')
-                f1_micro = f1_score(y_class, prediction, average = 'micro')
-                f1_fixed_macro = f1_score(y_class, prediction_fixed, average = 'macro')
-                f1_fixed_micro = f1_score(y_class, prediction_fixed, average = 'micro')
-
                 # selected chunk index
                 _, index_chunk = log_p_i.unsqueeze(1).topk(self.args.K, dim = -1)
 
@@ -279,110 +262,109 @@ class Solver(object):
                                                  original_nrow = self.original_nrow,
                                                  original_ncol = self.original_ncol, 
                                                  is_cuda = self.cuda).output
-#%%                                                         
-                #if 'mnist' in self.dataset:
-                #
-                #    data_size = x_raw.size()
-                #    binary_selected_all = idxtobool(index_chunk.view(data_size[0], data_size[1], -1), [data_size[0], data_size[1], data_size[2] * data_size[3]], self.cuda)            
-                #    data_zeropadded = torch.addcmul(torch.zeros(1), value = 1, 
-                #                                    tensor1=binary_selected_all.view(data_size).type(torch.FloatTensor), tensor2=x_raw.type(torch.FloatTensor), out=None)
-                #    data_zeropadded = data_zeropadded.type(self.x_type)
-                    
-                #elif 'imdb' in self.dataset:
-                #
-                #    data_size = x_raw.size()
-                #    binary_selected_all = idxtobool(index_chunk.view(data_size[0], -1), [data_size[0], data_size[1]], self.cuda)            
-                #    data_zeropadded = torch.addcmul(torch.zeros(1), value=1, tensor1=binary_selected_all.view(data_size).type(torch.FloatTensor), tensor2=x_raw.type(torch.FloatTensor), out=None)
-                #    data_zeropadded = data_zeropadded.type(self.x_type)
-                #    data_zeropadded[data_zeropadded == 0] = 1
                 
-                #else:
-                
-                #    raise UnknownDatasetError()
-#%%            
-                # Post-hoc Accuracy (zero-padded accuracy)
-                output_original = self.black_box(x)
-#                output_zeropadded = self.black_box(data_zeropadded)                
-#                pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
-#                accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
-           
-#                precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
-#                precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
-#                recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
-#                recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
-#                f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
-#                f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
-        
-                ## Variational Mutual Information            
-#                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-#                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-#                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-#                                              out=None), dim = -1)
-#                vmi_zeropadded = vmi.mean()
-                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                              tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                              out=None), dim = -1)
-                vmi_fidel = vmi.mean()
-
-                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                              tensor2 = logit_fixed.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit_fixed.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                              out=None), dim = -1)
-                vmi_fidel_fixed = vmi.mean()
-                
-                if self.num_avg != 0 :
-                    avg_soft_logit, avg_log_p_i, _, avg_soft_logit_fixed = self.net(x, self.num_avg)
-                    avg_prediction = avg_soft_logit.max(1)[1]
-                    avg_accuracy = torch.eq(avg_prediction,y_class).float().mean()
-                    avg_prediction_fixed  = avg_soft_logit_fixed.max(1)[1]
-                    avg_accuracy_fixed  = torch.eq(avg_prediction_fixed,y_class).float().mean()                  
-                    avg_precision_macro = precision_score(y_class, avg_prediction, average = 'macro')  
-#                    avg_precision_micro = precision_score(y_class, avg_prediction, average = 'micro')  
-                    avg_precision_fixed_macro = precision_score(y_class, avg_prediction_fixed, average = 'macro')  
-#                    avg_precision_fixed_micro = precision_score(y_class, avg_prediction_fixed, average = 'micro') 
-                    avg_recall_macro = recall_score(y_class, avg_prediction, average = 'macro')
-#                    avg_recall_micro = recall_score(y_class, avg_prediction, average = 'micro')
-                    avg_recall_fixed_macro = recall_score(y_class, avg_prediction_fixed, average = 'macro')
-#                    avg_recall_fixed_micro = recall_score(y_class, avg_prediction_fixed, average = 'micro')
-                    avg_f1_macro = f1_score(y_class, avg_prediction, average = 'macro')
-                    avg_f1_micro = f1_score(y_class, avg_prediction, average = 'micro')
-                    avg_f1_fixed_macro = f1_score(y_class, avg_prediction_fixed, average = 'macro')
-                    avg_f1_fixed_micro = f1_score(y_class, avg_prediction_fixed, average = 'micro')
-            
-                    ## Variational Mutual Information            
-                    vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                                  tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                                  tensor2 = avg_soft_logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(avg_soft_logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                                  out=None), dim = -1)
-                    avg_vmi_fidel = vmi.mean()
-    
-                    vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-                                                  tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-                                                  tensor2 = avg_soft_logit_fixed.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(avg_soft_logit_fixed.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-                                                  out=None), dim = -1)
-                    avg_vmi_fidel_fixed = vmi.mean()
-                    
-                else : 
-                    avg_accuracy = accuracy
-                    avg_accuracy_fixed = accuracy_fixed
-#                    avg_precision_macro = precision_macro
-                    avg_precision_micro = precision_micro
-#                    avg_precision_fixed_macro = precision_fixed_macro
-                    avg_precision_fixed_micro = precision_fixed_micro
-#                    avg_recall_macro = recall_macro
-                    avg_recall_micro = recall_micro
-#                    avg_recall_fixed_macro = recall_fixed_macro
-                    avg_recall_fixed_micro = recall_fixed_micro
-                    avg_f1_macro = f1_macro
-                    avg_f1_micro = f1_micro
-                    avg_f1_fixed_macro = f1_fixed_macro
-                    avg_f1_fixed_micro = f1_fixed_micro
-
-                    avg_vmi_fidel = vmi_fidel
-                    avg_vmi_fidel_fixed = vmi_fidel_fixed
-                    
                 if self.global_iter % 1000 == 0 :
+                    
+                    prediction = torch.argmax(logit, dim = -1)
+                    accuracy = torch.eq(prediction, y_class).float().mean() 
+                    prediction_fixed = torch.argmax(logit_fixed, dim = -1)
+                    accuracy_fixed = torch.eq(prediction_fixed, y_class).float().mean()
+                    precision_macro = precision_score(y_class, prediction, average = 'macro')  
+    #                precision_micro = precision_score(y_class, prediction, average = 'micro')  
+                    precision_fixed_macro = precision_score(y_class, prediction_fixed, average = 'macro') 
+    #                precision_fixed_micro = precision_score(y_class, prediction_fixed, average = 'micro')  
+                    recall_macro = recall_score(y_class, prediction, average = 'macro')
+    #                recall_micro = recall_score(y_class, prediction, average = 'micro')
+                    recall_fixed_macro = recall_score(y_class, prediction_fixed, average = 'macro')
+    #                recall_fixed_micro = recall_score(y_class, prediction_fixed, average = 'micro')        
+                    f1_macro = f1_score(y_class, prediction, average = 'macro')
+                    f1_micro = f1_score(y_class, prediction, average = 'micro')
+                    f1_fixed_macro = f1_score(y_class, prediction_fixed, average = 'macro')
+                    f1_fixed_micro = f1_score(y_class, prediction_fixed, average = 'micro')
+
+
+
+                    # Post-hoc Accuracy (zero-padded accuracy)
+                    output_original = self.black_box(x)
+    #                output_zeropadded = self.black_box(data_zeropadded)                
+    #                pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
+    #                accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
+
+    #                precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
+    #                precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
+    #                recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
+    #                recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
+    #                f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
+    #                f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
+
+                    ## Variational Mutual Information            
+    #                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+    #                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+    #                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+    #                                              out=None), dim = -1)
+    #                vmi_zeropadded = vmi.mean()
+                    vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                                                  tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                                                  tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                                                  out=None), dim = -1)
+                    vmi_fidel = vmi.mean()
+
+                    vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                                                  tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                                                  tensor2 = logit_fixed.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit_fixed.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                                                  out=None), dim = -1)
+                    vmi_fidel_fixed = vmi.mean()
+
+                    if self.num_avg != 0 :
+                        avg_soft_logit, avg_log_p_i, _, avg_soft_logit_fixed = self.net(x, self.num_avg)
+                        avg_prediction = avg_soft_logit.max(1)[1]
+                        avg_accuracy = torch.eq(avg_prediction,y_class).float().mean()
+                        avg_prediction_fixed  = avg_soft_logit_fixed.max(1)[1]
+                        avg_accuracy_fixed  = torch.eq(avg_prediction_fixed,y_class).float().mean()                  
+                        avg_precision_macro = precision_score(y_class, avg_prediction, average = 'macro')  
+    #                    avg_precision_micro = precision_score(y_class, avg_prediction, average = 'micro')  
+                        avg_precision_fixed_macro = precision_score(y_class, avg_prediction_fixed, average = 'macro')  
+    #                    avg_precision_fixed_micro = precision_score(y_class, avg_prediction_fixed, average = 'micro') 
+                        avg_recall_macro = recall_score(y_class, avg_prediction, average = 'macro')
+    #                    avg_recall_micro = recall_score(y_class, avg_prediction, average = 'micro')
+                        avg_recall_fixed_macro = recall_score(y_class, avg_prediction_fixed, average = 'macro')
+    #                    avg_recall_fixed_micro = recall_score(y_class, avg_prediction_fixed, average = 'micro')
+                        avg_f1_macro = f1_score(y_class, avg_prediction, average = 'macro')
+                        avg_f1_micro = f1_score(y_class, avg_prediction, average = 'micro')
+                        avg_f1_fixed_macro = f1_score(y_class, avg_prediction_fixed, average = 'macro')
+                        avg_f1_fixed_micro = f1_score(y_class, avg_prediction_fixed, average = 'micro')
+
+                        ## Variational Mutual Information            
+                        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                                                      tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                                                      tensor2 = avg_soft_logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(avg_soft_logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                                                      out=None), dim = -1)
+                        avg_vmi_fidel = vmi.mean()
+
+                        vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
+                                                      tensor1 = torch.exp(output_original).type(torch.FloatTensor),
+                                                      tensor2 = avg_soft_logit_fixed.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(avg_soft_logit_fixed.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
+                                                      out=None), dim = -1)
+                        avg_vmi_fidel_fixed = vmi.mean()
+
+                    else : 
+                        avg_accuracy = accuracy
+                        avg_accuracy_fixed = accuracy_fixed
+    #                    avg_precision_macro = precision_macro
+                        avg_precision_micro = precision_micro
+    #                    avg_precision_fixed_macro = precision_fixed_macro
+                        avg_precision_fixed_micro = precision_fixed_micro
+    #                    avg_recall_macro = recall_macro
+                        avg_recall_micro = recall_micro
+    #                    avg_recall_fixed_macro = recall_fixed_macro
+                        avg_recall_fixed_micro = recall_fixed_micro
+                        avg_f1_macro = f1_macro
+                        avg_f1_micro = f1_micro
+                        avg_f1_fixed_macro = f1_fixed_macro
+                        avg_f1_fixed_micro = f1_fixed_micro
+
+                        avg_vmi_fidel = vmi_fidel
+                        avg_vmi_fidel_fixed = vmi_fidel_fixed
 
                     print('\n\n[TRAINING RESULT]\n')
                     print('epoch {} Time since {}'.format(self.global_epoch, timeSince(self.start)), end = "\n")
@@ -400,7 +382,6 @@ class Solver(object):
 #                    print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
 #                            .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')
             
-                if self.global_iter % 1000 == 0 :
                     if self.tensorboard :
                         self.tf.add_scalars(main_tag='performance/accuracy',
                                             tag_scalar_dict={
