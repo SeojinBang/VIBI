@@ -107,7 +107,7 @@ class Explainer(nn.Module):
             self.concat_level = nn.Sequential(
                     #nn.Dropout(p = 0.2),
                     nn.Linear(in_features = self.num_wordlevel_explainer * 2, out_features = 1),
-                    #nn.ReLU(True),
+                    nn.ReLU(True),
                     #nn.Linear(in_features = 50, out_features = 1)
                     nn.LogSoftmax(1)
                     )
@@ -397,7 +397,7 @@ class Explainer(nn.Module):
         Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau, k = self.K, num_sample = num_sample) # torch.Size([batch-size, num-samples for multishot prediction, d]), d-dimentional random vector to approximate k-hot random explainer Z during training.
         #print(x.size(), Z_hat.size(), num_sample)
         logit = self.approximater(x, Z_hat, num_sample)
-        logit_fixed = self.approximater(x, Z_hat_fixed, num_sample = 1)
+        logit_fixed = self.approximater(x, Z_hat_fixed, num_sample)
 
         return logit, p_i, Z_hat, logit_fixed
 
