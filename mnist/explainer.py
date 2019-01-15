@@ -149,7 +149,7 @@ class Explainer(nn.Module):
         
         return p_i #[batch_size, d]
         
-    def decoder(self, x, Z_hat, num_sample):
+    def decoder(self, x, Z_hat, num_sample = 1):
         
         assert num_sample > 0
 
@@ -201,7 +201,7 @@ class Explainer(nn.Module):
         p_i = self.encoder(x) # probability of each element to be selected [barch-size, d]
         Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau, k = self.K, num_sample = num_sample) # torch.Size([batch-size, num-samples for multishot prediction, d]), d-dimentional random vector to approximate k-hot random explainer Z during training.
         logit = self.decoder(x, Z_hat, num_sample)
-        logit_fixed = self.decoder(x, Z_hat_fixed, num_sample)
+        logit_fixed = self.decoder(x, Z_hat_fixed)
 
         return logit, p_i, Z_hat, logit_fixed
         
