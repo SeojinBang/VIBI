@@ -273,7 +273,7 @@ class Explainer(nn.Module):
 
         return logits_T
         
-    def approximater(self, x, Z_hat, num_sample):
+    def approximater(self, x, Z_hat, num_sample = 1):
 
         assert num_sample > 0
 #        ## Upsampling
@@ -397,7 +397,7 @@ class Explainer(nn.Module):
         Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau, k = self.K, num_sample = num_sample) # torch.Size([batch-size, num-samples for multishot prediction, d]), d-dimentional random vector to approximate k-hot random explainer Z during training.
         #print(x.size(), Z_hat.size(), num_sample)
         logit = self.approximater(x, Z_hat, num_sample)
-        logit_fixed = self.approximater(x, Z_hat_fixed, num_sample)
+        logit_fixed = self.approximater(x, Z_hat_fixed)
 
         return logit, p_i, Z_hat, logit_fixed
 
