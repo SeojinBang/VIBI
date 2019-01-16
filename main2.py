@@ -78,7 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--tensorboard',default = True, type= str2bool, help='enable tensorboard')
     parser.add_argument('--save_image',default = True, type= str2bool, help='if True, then save images')
     parser.add_argument('--save_checkpoint',default = False, type= str2bool, help='if True, then save checkpoint')
-
+    parser.add_argument('--tau', default = 0.7, type = int, help = 'tau')
     args = parser.parse_args()
 #%%
     main(args)

@@ -16,7 +16,8 @@ class Explainer(nn.Module):
         self.args = kwargs['args']
         self.mode = self.args.mode
         self.device = torch.device("cuda" if self.args.cuda else "cpu")
-        self.tau = 0.5 # float, parameter for concrete random variable distribution
+        #self.tau = 0.7
+        self.tau = self.args.tau # float, parameter for concrete random variable distribution
         self.K = self.args.K # number of variables selected
         self.approximater_type = self.args.approximater_type if self.args.approximater_type is not 'None' else 'lstm'
         self.chunk_size = self.args.chunk_size
