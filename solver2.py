@@ -92,8 +92,12 @@ class Solver(object):
             self.chunk_size = self.args.chunk_size
             if self.chunk_size > self.original_ncol: self.chunk_size = self.original_ncol
             self.filter_size = (1, self.chunk_size)
-            self.idx_list = [0, 1, 2, 3, 197, 198, 199, 200]
-            
+            if self.batch_size == 50:
+                self.idx_list = [0, 1, 2, 4, 197, 198, 199, 200]
+            elif self.batch_size == 100:
+                self.idx_list = [0, 2, 99, 100]
+            else:
+                raise ValueError('set correct idx_list')
             ## load black box model
             
             from imdb.original import Net
@@ -682,9 +686,9 @@ class Solver(object):
                     
                     avg_vmi_fidel_sum = vmi_fidel_sum
                     avg_vmi_fidel_fixed_sum = vmi_fidel_fixed_sum
-                
+
                 #%% save image #
-                if self.save_image and (self.global_epoch % 5 == 0 and self.global_epoch > 50):
+                if self.save_image and (self.global_epoch % 10 == 0 and self.global_epoch > 75):
                     #print("SAVED!!!!")
                     if idx in self.idx_list: #(idx == 0 or idx == 200):
         
@@ -700,6 +704,7 @@ class Solver(object):
                                    filename = img_name, 
                                    is_cuda = self.cuda,
                                    word_idx = self.args.word_idx).output##
+
 #%%## Post-hoc Accuracy (zero-padded accuracy)
 #            accuracy_zeropadded = correct_zeropadded/total_num_ind
 #            precision_macro_zeropadded = precision_macro_zeropadded/total_num
