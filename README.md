@@ -28,7 +28,8 @@ python main.py --dataset mnist --epoch 40 --beta 0.1 --K 4 --explainer_type cnn4
 ```
 
 ## Credit
-[DeepVIB Repo](https://github.com/1Konny/VIB-pytorch): pytorch implementation of deep variational information bottleneck. 
+[DeepVIB Repo](https://github.com/1Konny/VIB-pytorch): pytorch implementation of deep variational information bottleneck.
+
 [L2X Repo](https://github.com/Jianbo-Lab/L2X): keras implementation of L2X.
 
 ## References
