@@ -18,9 +18,10 @@ def main(args):
     
     print('summarize {} and save in {}'.format(filename, result_dir))
     
-#    fns = np.array([filename + '_idx0.txt', filename + '_idx200.txt'])
-    idx_list = [0, 1, 2, 4, 120, 121, 123, 124, 197, 198, 199, 200]
-    fns = np.array([filename + '_idx' + str(item) + '.txt' for item in idx_list])
+    fns = np.array([filename + '_idx0.txt', filename + '_idx200.txt'])
+    #idx_list = [0, 1, 2, 4, 120, 121, 123, 124, 197, 198, 199, 200]
+    #idx_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 120, 121, 123, 124, 197, 198, 199, 200]
+    #fns = np.array([filename + '_idx' + str(item) + '.txt' for item in idx_list])
     
     contents_all = []
     sent = []
