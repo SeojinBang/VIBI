@@ -9,8 +9,8 @@ This repo includes pytorch implementation of **VIBI**. VIBI is a system-agnostic
 
 <img src="img/aim3-overview.pdf" width="100">
 <img src="img/aim3-imdbmnist.pdf" width="100">
-[![Figure 1. Overview of VIBI](img/aim3-overview.pdf)]
-[![Figure 2. ](img/aim3-imdbmnist.pdf)]
+[![Figure 1. Overview of VIBI](img/aim3-overview.pdf)](img/aim3-overview.pdf)
+[![Figure 2. Explanations provided by VIBI](img/aim3-imdbmnist.pdf)](img/aim3-imdbmnist.pdf)
 
 ## Usage
 Download and install the environment from Cloud.
