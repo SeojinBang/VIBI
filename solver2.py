@@ -1,6 +1,5 @@
 import os
 import sys
-#os.chdir('~/Users/seojin.bang/OneDrive\ -\ Petuum\,\ Inc/VIB-pytorch')dd
 import time
 import math
 import torch
@@ -17,8 +16,7 @@ from utils import cuda, Weight_EMA_Update, label2binary, save_batch, index_trans
 from return_data import return_data
 from pathlib import Path
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
-#import pandas as pd
-#%%
+
 class Solver(object):
 
     def __init__(self, args):

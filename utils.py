@@ -10,13 +10,12 @@ import argparse
 import torch
 from PIL import Image
 from PIL import ImageDraw
-#import re
 from torch import nn
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import label_binarize
-#%%
+
 class UnknownDatasetError(Exception):
     def __str__(self):
         return "ERROR: unknown datasets error"
@@ -142,7 +141,7 @@ def cuda(tensor, is_cuda):
     Args:
         is_cuda: logical. True or False 
     
-    Credit: VIB-pytorch
+    Credit: https://github.com/1Konny/VIB-pytorch
     '''
     if is_cuda : return tensor.cuda()
     else : return tensor
@@ -337,7 +336,7 @@ class index_transfer(object):
         self.output = func()
     
     def default(self): 
- #%%       
+
         assert  self.original_nrow % self.filter_size_row < 1
         assert  self.original_ncol % self.filter_size_col < 1
         bat_size = self.idx.size(0)
@@ -347,7 +346,7 @@ class index_transfer(object):
         
         idx_2d_unpool0 = torch.add(torch.mul(torch.div(self.idx, ncol), self.filter_size_row).view(-1, 1), cuda(torch.arange(self.filter_size_row), self.is_cuda)).view(-1, self.filter_size_row)
         idx_2d_unpool1 = torch.add(torch.mul(torch.remainder(self.idx, ncol), self.filter_size_col).view(-1, 1), cuda(torch.arange(self.filter_size_col), self.is_cuda)).view(-1, self.filter_size_col)
- #%%    
+
         idx_2d_unpool0 = idx_2d_unpool0.view(-1, 1).expand(-1, self.filter_size_col).contiguous().view(bat_size, -1)
         idx_2d_unpool1 = idx_2d_unpool1.view(-1, 1).expand(-1, self.filter_size_row).contiguous().view(bat_size, -1)
         
@@ -419,7 +418,6 @@ class TimeDistributed(nn.Module):
 
         x = x.permute(0, 2, 1) # reshape x
         y = self.module(x)
-        #y = torch.LongTensor(y)
         
         if len(y.size()) == 3:
             y = y.permute(0, 2, 1) # reshape y

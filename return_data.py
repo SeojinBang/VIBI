@@ -1,19 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Aug  3 14:31:14 2018
-
-@author: seojin.bang
-"""
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from mnist.data_loader import MNIST_modified
 from torchtext import data
 from torchtext.vocab import GloVe
-#from torchtext.datasets import IMDB
 from imdb.data_loader import IMDB_modified, tokenizer_twolevel
-#%%
+
 class UnknownDatasetError(Exception):
     def __str__(self):
         return "unknown datasets error"
