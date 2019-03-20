@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import argparse
 from utils import str2bool
-from solver2 import Solver
+from solver import Solver
 
 def main(args):
 
