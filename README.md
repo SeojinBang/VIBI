@@ -7,10 +7,10 @@
 ## Overview
 This repo includes pytorch implementation of **VIBI**. VIBI is a system-agnostic interpretable machine learning method that provides a brief but comprehensive explanation. It adopts the inspring information theoretic principle, *information bottleneck principle*. Using an information theoretic objective, VIBI selects instance-wise key features that are maximally compressed about an input (briefness), and informative about a decision made by a black-box on that input (comprehensive). The selected key features act as an information bottleneck that serves as a concise explanation for a black-box decision. Please see our recent paper -- [arXiv preprint](https://arxiv.org/abs/1902.06918).
 
-<img src="imgs/aim3-overview.pdf" width="100">
-<img src="imgs/aim3-imdbmnist.pdf" width="100">
-[![Figure 1. Overview of VIBI](imgs/aim3-overview.pdf)]
-[![Figure 2. ](imgs/aim3-imdbmnist.pdf)]
+<img src="img/aim3-overview.pdf" width="100">
+<img src="img/aim3-imdbmnist.pdf" width="100">
+[![Figure 1. Overview of VIBI](img/aim3-overview.pdf)]
+[![Figure 2. ](img/aim3-imdbmnist.pdf)]
 
 ## Usage
 Download and install the environment from Cloud.
