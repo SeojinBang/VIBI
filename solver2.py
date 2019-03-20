@@ -186,7 +186,7 @@ class Solver(object):
             if not self.summary_dir.exists() : self.summary_dir.mkdir(parents = True, exist_ok = True)
             self.tf = SummaryWriter(log_dir = str(self.summary_dir))
             self.tf.add_text(tag='argument',text_string = str(args), global_step = self.global_epoch)
-#%%
+
     def set_mode(self, mode='train'):
         if mode == 'train':
             self.net.train()
@@ -197,19 +197,19 @@ class Solver(object):
             self.net_ema.model.eval()
             
         else : raise('mode error. It should be either train or eval')
-#%%
+
     def train(self, test = False):
-#%%
+
         self.set_mode('train')
-        #%%
+
         self.class_criterion = nn.CrossEntropyLoss(reduction = 'sum')
         self.info_criterion = nn.KLDivLoss(reduction = 'sum')
-#%%     
+
         start = time.time()   
         for e in range(self.epoch) :
-            #if e > 1: break
+
             self.global_epoch += 1
-#%%
+
             for idx, batch in enumerate(self.data_loader['train']):
                 
                 if 'mnist' in self.dataset:
@@ -230,7 +230,7 @@ class Solver(object):
                 
                 x = Variable(cuda(x_raw, self.args.cuda)).type(self.x_type)
                 y = Variable(cuda(y_raw, self.args.cuda)).type(self.y_type)
-#%%
+
                 #raise ValueError('num_sample should be a positive integer') 
                 logit, log_p_i, Z_hat, logit_fixed = self.net(x)
 
@@ -240,7 +240,7 @@ class Solver(object):
                 ## define loss
                 y_class = y if len(y.size()) == 1 else torch.argmax(y, dim = -1)
 #                y_binary = label2binary(y_class, classes = range(logit.size(-1)))
-#%%
+
                 class_loss = self.class_criterion(logit, y_class).div(math.log(2)) / self.batch_size
                 info_loss = self.args.K * self.info_criterion(log_p_i, p_i_prior) / self.batch_size
                 total_loss = class_loss + self.beta * info_loss
@@ -253,18 +253,6 @@ class Solver(object):
                 self.optim.step()
                 self.net_ema.update(self.net.state_dict())
 
-#                 # selected chunk index
-#                 _, index_chunk = log_p_i.unsqueeze(1).topk(self.args.K, dim = -1)
-
-#                 if self.chunk_size is not 1:
-                    
-#                     index_chunk = index_transfer(dataset = self.dataset,
-#                                                  idx = index_chunk, 
-#                                                  filter_size = self.filter_size,
-#                                                  original_nrow = self.original_nrow,
-#                                                  original_ncol = self.original_ncol, 
-#                                                  is_cuda = self.cuda).output
-                
                 if self.global_iter % 1000 == 0 :
                     
                     prediction = torch.argmax(logit, dim = -1)
@@ -288,23 +276,6 @@ class Solver(object):
 
                     # Post-hoc Accuracy (zero-padded accuracy)
                     output_original = self.black_box(x)
-    #                output_zeropadded = self.black_box(data_zeropadded)                
-    #                pred_zeropadded = F.softmax(output_zeropadded, dim=1).max(1)[1]
-    #                accuracy_zeropadded = torch.eq(pred_zeropadded, y_class).float().mean() 
-
-    #                precision_macro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'macro')  
-    #                precision_micro_zeropadded = precision_score(y_class, pred_zeropadded, average = 'micro')  
-    #                recall_macro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'macro')
-    #                recall_micro_zeropadded = recall_score(y_class, pred_zeropadded, average = 'micro')
-    #                f1_macro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'macro')
-    #                f1_micro_zeropadded = f1_score(y_class, pred_zeropadded, average = 'micro')
-
-                    ## Variational Mutual Information            
-    #                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-    #                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-    #                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-    #                                              out=None), dim = -1)
-    #                vmi_zeropadded = vmi.mean()
                     vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
                                                   tensor1 = torch.exp(output_original).type(torch.FloatTensor),
                                                   tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
@@ -381,8 +352,6 @@ class Solver(object):
                             .format(vmi_fidel.item(), avg_vmi_fidel.item()), end = '\n')
                     print('vmi_fixed:{:.4f} avg_vmi_fixed:{:.4f}'
                             .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
-#                    print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
-#                            .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')
             
                     if self.tensorboard :
                         self.tf.add_scalars(main_tag='performance/accuracy',
@@ -468,8 +437,7 @@ class Solver(object):
                                                 'I(Z;Y)':izy_bound.item(),
                                                 'I(Z;X)':izx_bound.item()},
                                             global_step=self.global_iter)
-#%%
-            #if (self.global_epoch % 2) == 0 : self.scheduler.step()
+
             self.val(test = test)
             
             print("epoch:{}".format(e + 1))
@@ -479,7 +447,7 @@ class Solver(object):
 
     def val(self, test = False):
         print('test', test)
-#%%        
+
         self.set_mode('eval')
         #self.class_criterion_val = nn.CrossEntropyLoss()#size_average = False)
         #self.info_criterion_val = nn.KLDivLoss()#size_average = False)
@@ -520,7 +488,7 @@ class Solver(object):
         total_num = 0
         total_num_ind = 0
 
-#%%     
+
         with torch.no_grad():
             data_type = 'test' if test else 'valid'  
             for idx, batch in enumerate(self.data_loader[data_type]):
@@ -593,36 +561,11 @@ class Solver(object):
                                                  original_nrow = self.original_nrow,
                                                  original_ncol = self.original_ncol, 
                                                  is_cuda = self.cuda).output
-#%%               
-#                if 'mnist' in self.dataset:
-#                
-#                    data_size = x_raw.size()
-#                    binary_selected_all = idxtobool(index_chunk.view(data_size[0], data_size[1], -1), [data_size[0], data_size[1], data_size[2] * data_size[3]], self.cuda)            
-#                    data_zeropadded = torch.addcmul(torch.zeros(1), value=1, tensor1=binary_selected_all.view(data_size).type(torch.FloatTensor), tensor2=x_raw.type(torch.FloatTensor), out=None)
-#                    data_zeropadded = data_zeropadded.type(self.x_type)
-#                    #data_zeropadded[data_zeropadded == 0] = -1
-#                    
-#                elif 'imdb' in self.dataset:
-#                
-#                    data_size = x_raw.size()
-#                    binary_selected_all = idxtobool(index_chunk.view(data_size[0], -1), [data_size[0], data_size[1]], self.cuda)            
-#                    data_zeropadded = torch.addcmul(torch.zeros(1), value=1, tensor1=binary_selected_all.view(data_size).type(torch.FloatTensor), tensor2=x_raw.type(torch.FloatTensor), out=None)
-#                    data_zeropadded = data_zeropadded.type(self.x_type)
-#                    data_zeropadded[data_zeropadded == 0] = 1
-#                
-#                else:
-#                
-#                    raise UnknownDatasetError()
-#%%        
+
                 # Post-hoc Accuracy (zero-padded accuracy)
                 output_original = self.black_box(x)
         
                 ## Variational Mutual Information                           
-#                vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
-#                                              tensor1 = torch.exp(output_original).type(torch.FloatTensor),
-#                                              tensor2 = output_zeropadded.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(output_zeropadded.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
-#                                              out=None), dim = -1)
-#                vmi_zeropadded_sum += vmi.sum()
                 vmi = torch.sum(torch.addcmul(torch.zeros(1), value = 1, 
                                               tensor1 = torch.exp(output_original).type(torch.FloatTensor),
                                               tensor2 = logit.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
@@ -634,11 +577,8 @@ class Solver(object):
                                               tensor2 = logit_fixed.type(torch.FloatTensor) - torch.logsumexp(output_original, dim = 0).unsqueeze(0).expand(logit_fixed.size()).type(torch.FloatTensor) + torch.log(torch.tensor(output_original.size(0)).type(torch.FloatTensor)),
                                               out=None), dim = -1)
                 vmi_fidel_fixed_sum += vmi.sum()
-
                 
-#%%                
                 if self.num_avg != 0 :
-                    #print("multishot")
                     avg_soft_logit, avg_log_p_i, _, avg_soft_logit_fixed = self.net_ema.model(x, self.num_avg)
                     #avg_soft_logit, _, _, avg_soft_logit_fixed = self.net(x,self.num_avg)
                     avg_prediction = avg_soft_logit.max(1)[1]
@@ -703,19 +643,6 @@ class Solver(object):
                                    is_cuda = self.cuda,
                                    word_idx = self.args.word_idx).output##
 
-#%%## Post-hoc Accuracy (zero-padded accuracy)
-#            accuracy_zeropadded = correct_zeropadded/total_num_ind
-#            precision_macro_zeropadded = precision_macro_zeropadded/total_num
-#            precision_micro_zeropadded = precision_micro_zeropadded/total_num
-#            precision_weighted_zeropadded = precision_weighted_zeropadded/total_num
-#            recall_macro_zeropadded = recall_macro_zeropadded/total_num
-#            recall_micro_zeropadded = recall_micro_zeropadded/total_num
-#            recall_weighted_zeropadded = recall_weighted_zeropadded/total_num
-#            f1_macro_zeropadded = f1_macro_zeropadded/total_num
-#            f1_micro_zeropadded = f1_micro_zeropadded/total_num
-#            f1_weighted_zeropadded = f1_weighted_zeropadded/total_num
-
-#            vmi_zeropadded = vmi_zeropadded_sum/total_num_ind
             vmi_fidel = vmi_fidel_sum/total_num_ind
             vmi_fidel_fixed = vmi_fidel_fixed_sum/total_num_ind
             avg_vmi_fidel = avg_vmi_fidel_sum/total_num_ind
@@ -755,8 +682,6 @@ class Solver(object):
             izx_bound = info_loss
             
             print('\n\n[VAL RESULT]\n')
-            #tab = pd.crosstab(y_class, prediction)
-            #print(tab, end = "\n")
             print('epoch {}'.format(self.global_epoch), end = "\n") 
             print('global iter {}'.format(self.global_iter), end = "\n")                   
             print('IZY:{:.2f} IZX:{:.2f}'
@@ -769,39 +694,8 @@ class Solver(object):
                     .format(vmi_fidel.item(), avg_vmi_fidel.item()), end = '\n')
             print('vmi_fixed:{:.4f} avg_vmi_fixed:{:.4f}'
                     .format(vmi_fidel_fixed.item(), avg_vmi_fidel_fixed.item()), end = '\n')
-#            print('acc_zeropadded:{:.4f} vmi_zeropadded:{:.4f}'
-#                    .format(accuracy_zeropadded.item(), vmi_zeropadded.item()), end = '\n')                 
-#    #        print('auc_macro:{:.4f} avg_auc_macro:{:.4f}'
-#    #                .format(auc_macro.item(), avg_auc_macro.item()), end = '\n')   
-#    #        print('auc_micro:{:.4f} avg_auc_micro:{:.4f}'
-#    #                .format(auc_micro.item(), avg_auc_micro.item()), end = '\n')     
-#            print('precision_macro:{:.4f} avg_precision_macro:{:.4f}'
-#                    .format(precision_macro, avg_precision_macro), end = '\n') 
-#            print('precision_micro:{:.4f} avg_precision_micro:{:.4f}'
-#                    .format(precision_micro, avg_precision_micro), end = '\n')
-#            print('recall_macro:{:.4f} avg_recall_macro:{:.4f}'
-#                    .format(recall_macro, avg_recall_macro), end = '\n')   
-#            print('recall_micro:{:.4f} avg_recall_micro:{:.4f}'
-#                    .format(recall_micro, avg_recall_micro), end = '\n') 
-#            print('f1_macro:{:.4f} avg_f1_macro:{:.4f}'
-#                    .format(f1_macro, avg_f1_macro), end = '\n')   
-#            print('f1_micro:{:.4f} avg_f1_micro:{:.4f}'
-#                    .format(f1_micro, avg_f1_micro), end = '\n') 
-#            print('precision_macro_zeropadded:{:.4f}'
-#                    .format(precision_macro_zeropadded), end = '\n')
-#            print('precision_micro_zeropadded:{:.4f}'
-#                    .format(precision_micro_zeropadded), end = '\n')
-#            print('recall_macro_zeropadded:{:.4f}'
-#                    .format(recall_macro_zeropadded), end = '\n')   
-#            print('recall_micro_zeropadded:{:.4f}'
-#                    .format(recall_micro_zeropadded), end = '\n') 
-#            print('f1_macro_zeropadded:{:.4f}'
-#                    .format(f1_macro_zeropadded), end = '\n')   
-#            print('f1_micro_zeropadded:{:.4f}'
-#                    .format(f1_micro_zeropadded), end = '\n') 
-            
             print()
-#%%                
+
             if self.save_checkpoint and (self.history['avg_acc'] < avg_accuracy.item()) :
                 
                 self.history['class_loss'] = class_loss.item()

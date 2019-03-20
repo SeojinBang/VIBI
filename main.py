@@ -42,7 +42,6 @@ if __name__ == "__main__":
     parser.add_argument('--env_name', default = 'main', type = str, help='visdom env name')
     parser.add_argument('--dataset', required = True, type = str, help='dataset name: imdb, mnist')
     parser.add_argument('--model_name', required = True, type = str, help='model names to be interpreted')
-    parser.add_argument('--model_name', default = 'original.ckpt', type = str, help='model names to be interpreted')
     parser.add_argument('--explainer_type', default = 'None', type = str, help='explainer types: nn, cnn for mnist')    
     parser.add_argument('--approximater_type', default = 'None', type = str, help='explainer types: nn, cnn')    
     parser.add_argument('--load_checkpoint',default = '', type = str, help = 'checkpoint name')
