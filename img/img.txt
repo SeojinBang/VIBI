@@ -1,2 +1,0 @@
-Figure1. Overview of VIBI
-Figure2. Result from MNIST and IMDB
