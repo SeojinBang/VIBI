@@ -24,18 +24,19 @@ class UnknownModelError(Exception):
     def __str__(self):
         return "ERROR: unknown model type"
 
-#class NoOriginalModelError(Exception):
-#    def __str__(self, data_dir):
-#        return "ERROR: there is no model to be interpretated in the data directory {}".format(data_dir)
-
 def check_model_name(model_name, file_path = 'models'):
     """
     Check whether model name is overlapped or not 
     """
+
     if model_name in os.listdir(file_path):
         
-        valid = {"yes": True, "y": True, "ye": True, 'true': True, 't': True, '1': True, "no": False, "n": False, 'false': False, 'f': False, '0': False}
-        sys.stdout.write("The file {} already exists. Do you want to overwrite it? [yes/no]".format(model_name))
+        valid = {"yes": True, "y": True, "ye": True, 'true': True,
+                 't': True, '1': True,
+                 "no": False, "n": False, 'false': False,
+                 'f': False, '0': False}
+        sys.stdout.write("The file {} already exists. Do you want to overwrite it? [yes/no]".\
+                         format(model_name))
         choice = input().lower()
     
         if choice in valid:
@@ -53,7 +54,11 @@ def check_model_name(model_name, file_path = 'models'):
 def compare_with_previous(correct, correct_pre, compare = True):
     
     if compare and correct < correct_pre:
-        valid = {"yes": True, "y": True, "ye": True, 'true': True, 't': True, '1': True, "no": False, "n": False, 'false': False, 'f': False, '0': False}
+
+        valid = {"yes": True, "y": True, "ye": True, 'true': True,
+                 't': True, '1': True,
+                 "no": False, "n": False,
+                 'false': False, 'f': False, '0': False}
         sys.stdout.write('the accuracy is not improved from the last model. Do you want to proceed it? [yes/no]')
         choice = input().lower()
         
@@ -62,42 +67,50 @@ def compare_with_previous(correct, correct_pre, compare = True):
         
         else:
             sys.stdout.write("Please respond with 'yes' or 'no'\n")
-            compare_with_previous(correct = correct, correct_pre = correct_pre, compare = compare)
+            compare_with_previous(correct = correct,
+                                  correct_pre = correct_pre,
+                                  compare = compare)
     
 def get_selected_words(x_single, score, id_to_word, k): 
     
-    #selected_words = {} # {location: word_id}
     selected = np.argsort(score)[-k:] 
     selected_k_hot = np.zeros(400)
     selected_k_hot[selected] = 1.0
 
     x_selected = (x_single * selected_k_hot).astype(int)
+    
     return x_selected 
 
 def create_dataset_from_score(x, scores, k):
     
     with open('data/id_to_word.pkl','rb') as f:
         id_to_word = pickle.load(f)
-    new_data = []
-    #new_texts = []
-    for i, x_single in enumerate(x):
-        x_selected = get_selected_words(x_single, 
-            scores[i], id_to_word, k)
 
+    new_data = []
+    for i, x_single in enumerate(x):
+        x_selected = get_selected_words(x_single,
+                                        scores[i],
+                                        id_to_word, k)
         new_data.append(x_selected) 
 
     np.save('data/x_val-L2X.npy', np.array(new_data))
 
 def calculate_acc(pred, y):
+
     return np.mean(np.argmax(pred, axis = 1) == np.argmax(y, axis = 1))
 
 def label2binary(label, classes):
+
     classes = list(classes)
     if len(classes) == 2:
+
         classes.append(-1)
         res = label_binarize(label, classes = classes)
+
         return res[:, :-1]
+    
     else:
+
         return label_binarize(label, classes = classes)
 
 def idxtobool(idx, size, is_cuda):
@@ -109,6 +122,7 @@ def idxtobool(idx, size, is_cuda):
             for j in range(size[1]):
                 subidx = idx[i, j, :]
                 V[i, j, subidx] = float(1)
+                
     elif len(size) is 2:
         
         for i in range(size[0]):
@@ -116,21 +130,23 @@ def idxtobool(idx, size, is_cuda):
             V[i,subidx] = float(1)
             
     else:
+        
         raise argparse.ArgumentTypeError('len(size) should be larger than 1')
             
     return V
 
 def str2bool(v):
-    """
-    Convert string to boolean object
-    
-    Credit: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
-    """
 
-    if v.lower() in ('yes', 'true', 't', 'y', '1', 'True', 'Y', 'Yes', 'YES', 'YEs', 'ye'):
+    if v.lower() in ('yes', 'true', 't', 'y',
+                     '1', 'True', 'Y', 'Yes',
+                     'YES', 'YEs', 'ye'):
         return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0', 'False', 'N', 'NO', 'No'):
+    
+    elif v.lower() in ('no', 'false', 'f', 'n',
+                       '0', 'False', 'N', 'NO',
+                       'No'):
         return False
+    
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
         
@@ -143,13 +159,18 @@ def cuda(tensor, is_cuda):
     
     Credit: https://github.com/1Konny/VIB-pytorch
     '''
-    if is_cuda : return tensor.cuda()
-    else : return tensor
+
+    if is_cuda :
+        return tensor.cuda()
+    
+    else :
+        return tensor
 
 def timeSince(since):
     """
     Credit: https://github.com/1Konny/VIB-pytorch
     """
+
     now = time.time()
     s = now - since
     m = math.floor(s / 60)
@@ -170,8 +191,11 @@ def query_yes_no(question, default = "yes"):
     Credit: fmark and Nux
     https://stackoverflow.com/questions/3041986/apt-command-line-interface-like-yes-no-input
     """
-    valid = {"yes": True, "y": True, "ye": True, 'true': True, 't': True, '1': True,
-             "no": False, "n": False, 'false': False, 'f': False, '0': False}
+
+    valid = {"yes": True, "y": True, "ye": True,
+             'true': True, 't': True, '1': True,
+             "no": False, "n": False, 'false': False,
+             'f': False, '0': False}
     
     if default is None:
         prompt = " [y/n] "
@@ -195,21 +219,24 @@ def query_yes_no(question, default = "yes"):
 class Weight_EMA_Update(object):
 
     def __init__(self, model, initial_state_dict, decay=0.999):
+
         self.model = model
         self.model.load_state_dict(initial_state_dict, strict=True)
         self.decay = decay
 
     def update(self, new_state_dict):
+        
         state_dict = self.model.state_dict()
         for key in state_dict.keys():
-            state_dict[key] = (self.decay)*state_dict[key] + (1-self.decay)*new_state_dict[key]
-            #state_dict[key] = (1-self.decay)*state_dict[key] + (self.decay)*new_state_dict[key]
+            state_dict[key] = (self.decay) * state_dict[key] + (1 - self.decay) *new_state_dict[key]
 
         self.model.load_state_dict(state_dict)
 
 class save_batch(object):
 
-    def __init__(self, dataset, batch, label, label_pred, label_approx, index, filename, is_cuda, word_idx = None): #change
+    def __init__(self, dataset, batch, label, label_pred,
+                 label_approx, index,
+                 filename, is_cuda, word_idx = None): 
         
         self.batch = batch
         self.label = label
@@ -226,11 +253,11 @@ class save_batch(object):
 
         word_idx = self.word_idx          
         width = 100
-        #height = 100
         current_line = 0 
         skip_line = 10
         if len(self.index.size()) == 3:
-            self.index = self.index.view(self.index.size(0), self.index.size(1) * self.index.size(2))
+            self.index = self.index.view(self.index.size(0),
+                                         self.index.size(1) * self.index.size(2))
         
         img = Image.new("RGBA", (700, 10000), 'white')
         draw = ImageDraw.Draw(img)
@@ -275,6 +302,7 @@ class save_batch(object):
         """
         draw and save MNIST images and selected chunks
         """
+        
         img = copy.deepcopy(self.batch)    
         n_img = img.size(0)
         n_col = 8
@@ -341,17 +369,26 @@ class index_transfer(object):
         assert  self.original_ncol % self.filter_size_col < 1
         bat_size = self.idx.size(0)
         ncol = cuda(torch.LongTensor([self.original_ncol // self.filter_size_col]), self.is_cuda)
-        #nrow = cuda(torch.LongTensor([self.original_nrow // self.filter_size_row]), self.is_cuda)
-        #idx_2d = torch.stack([torch.div(self.idx, ncol), torch.remainder(self.idx, ncol)])
         
-        idx_2d_unpool0 = torch.add(torch.mul(torch.div(self.idx, ncol), self.filter_size_row).view(-1, 1), cuda(torch.arange(self.filter_size_row), self.is_cuda)).view(-1, self.filter_size_row)
-        idx_2d_unpool1 = torch.add(torch.mul(torch.remainder(self.idx, ncol), self.filter_size_col).view(-1, 1), cuda(torch.arange(self.filter_size_col), self.is_cuda)).view(-1, self.filter_size_col)
+        idx_2d_unpool0 = torch.add(torch.mul(torch.div(self.idx, ncol),
+                                             self.filter_size_row).view(-1, 1),
+                                   cuda(torch.arange(self.filter_size_row),
+                                        self.is_cuda)).view(-1, self.filter_size_row)
+        idx_2d_unpool1 = torch.add(torch.mul(torch.remainder(self.idx, ncol),
+                                             self.filter_size_col).view(-1, 1),
+                                   cuda(torch.arange(self.filter_size_col),
+                                        self.is_cuda)).view(-1, self.filter_size_col)
 
-        idx_2d_unpool0 = idx_2d_unpool0.view(-1, 1).expand(-1, self.filter_size_col).contiguous().view(bat_size, -1)
-        idx_2d_unpool1 = idx_2d_unpool1.view(-1, 1).expand(-1, self.filter_size_row).contiguous().view(bat_size, -1)
+        idx_2d_unpool0 = idx_2d_unpool0.view(-1, 1).expand(-1,
+                                    self.filter_size_col).contiguous().view(bat_size, -1)
+        idx_2d_unpool1 = idx_2d_unpool1.view(-1, 1).expand(-1,
+                                    self.filter_size_row).contiguous().view(bat_size, -1)
         
-        idx_2d_unpool0 = torch.mul(idx_2d_unpool0, cuda(torch.LongTensor([self.original_ncol]), self.is_cuda))
-        idx_2d_unpool1 = torch.transpose(idx_2d_unpool1.view(-1, self.filter_size_row, self.filter_size_col), 1, 2).contiguous().view(bat_size, -1)
+        idx_2d_unpool0 = torch.mul(idx_2d_unpool0,
+                                   cuda(torch.LongTensor([self.original_ncol]), self.is_cuda))
+        idx_2d_unpool1 = torch.transpose(idx_2d_unpool1.view(-1,
+                                    self.filter_size_row,
+                                    self.filter_size_col), 1, 2).contiguous().view(bat_size, -1)
         
         idx_unpool = torch.add(idx_2d_unpool0, idx_2d_unpool1)
         
@@ -362,7 +399,8 @@ class index_transfer(object):
         if self.filter_size_col < self.original_ncol:
             
             chunk_size = self.filter_size_col
-            newadd = cuda(torch.LongTensor(range(chunk_size)), self.is_cuda).unsqueeze(0).unsqueeze(0).unsqueeze(0)
+            newadd = cuda(torch.LongTensor(range(chunk_size)),
+                          self.is_cuda).unsqueeze(0).unsqueeze(0).unsqueeze(0)
             
             new_size_col = self.original_ncol - chunk_size + 1
             self.idx = torch.add(self.idx, torch.mul(torch.div(self.idx, new_size_col), chunk_size - 1))
@@ -381,6 +419,7 @@ class index_transfer(object):
         return self.default()
     
 class Reshape(nn.Module):
+    
     def __init__(self, *args):
         super(Reshape, self).__init__()
         self.shape = args
@@ -389,6 +428,7 @@ class Reshape(nn.Module):
         return x.view(self.shape)  
     
 class Flatten(nn.Module):
+    
     def __init__(self):
         super(Flatten, self).__init__()
 

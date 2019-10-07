@@ -71,14 +71,20 @@ def return_data(args):
         label_pred = data.Field(use_vocab = False, fix_length = 1)
         fname = data.Field(use_vocab = False, fix_length = 1)
         
-        train, valid, test = IMDB_modified.splits(text, label, label_pred, fname, root = root, model_name = args.model_name, load_pred = args.load_pred)
+        train, valid, test = IMDB_modified.splits(text, label, label_pred, fname,
+                                                  root = root, model_name = args.model_name,
+                                                  load_pred = args.load_pred)
         print("build vocab...")
-        text.build_vocab(train, vectors = GloVe(name = '6B', dim = embedding_dim, cache = root), max_size = max_total_num_words)
+        text.build_vocab(train, vectors = GloVe(name = '6B',
+                                                dim = embedding_dim,
+                                                cache = root), max_size = max_total_num_words)
         label.build_vocab(train)
-        #label_pred.build_vocab(train)
         
         print("Create Iterator objects for multiple splits of a dataset...")
-        train_loader, valid_loader, test_loader = data.Iterator.splits((train, valid, test), batch_size = batch_size, device = device, repeat = False)
+        train_loader, valid_loader, test_loader = data.Iterator.splits((train, valid, test),
+                                                                       batch_size = batch_size,
+                                                                       device = device,
+                                                                       repeat = False)
         
         data_loader['word_idx'] = text.vocab.itos
         data_loader['x_type'] = torch.cuda.LongTensor if args.cuda else torch.LongTensor
@@ -86,7 +92,6 @@ def return_data(args):
         data_loader['max_total_num_words'] = max_total_num_words
         data_loader['embedding_dim'] = embedding_dim
         data_loader['max_num_words'] = 50
-        #_, (text, _, _, _) = next(iter(train_loader))
         data_loader['max_num_sents'] = int(next(iter(train_loader)).text.size(-1) / data_loader['max_num_words'])
 
     else : raise UnknownDatasetError()
