@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Aug  2 12:31:55 2018
-
-@author: seojin.bang
-
-structure from original model from https://github.com/pytorch/examples/tree/master/mnist
-"""
 from __future__ import print_function
 import os
 import sys
@@ -108,15 +101,24 @@ def main():
 
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     
-    parser.add_argument('--dataset', default = 'mnist', type = str, help='dataset name: imdb-sent, imdb-word, mnist, mimic')
-    parser.add_argument('--data_dir', default = 'dataset', type = str, help='data directory path')
-    parser.add_argument('--batch_size', type=int, default = 100, metavar='N', help='input batch size for training (default: 64)')
-    parser.add_argument('--model_name', default = 'original.ckpt', type = str, help = 'if train is True, model name to be saved, otherwise model name to be loaded')
-    parser.add_argument('--epoch', type = int, default=10, metavar='N', help='number of epoch to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=0.01, metavar='LR', help='learning rate (default: 0.01)')
-    parser.add_argument('--cuda', default = True, type = str2bool, help = 'enable cuda')
-    parser.add_argument('--seed', default = 2555, type = int, help='random seed (defalut 2555')
-    parser.add_argument('--log-interval', type=int, default=10, metavar='N', help='how many batches to wait before logging training status')
+    parser.add_argument('--dataset', default = 'mnist', type = str,
+                        help='dataset name: imdb-sent, imdb-word, mnist, mimic')
+    parser.add_argument('--data_dir', default = 'dataset', type = str,
+                        help='data directory path')
+    parser.add_argument('--batch_size', type=int, default = 100, metavar='N',
+                        help='input batch size for training (default: 64)')
+    parser.add_argument('--model_name', default = 'original.ckpt', type = str,
+                        help = 'if train is True, model name to be saved, otherwise model name to be loaded')
+    parser.add_argument('--epoch', type = int, default=10, metavar='N',
+                        help='number of epoch to train (default: 10)')
+    parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+                        help='learning rate (default: 0.01)')
+    parser.add_argument('--cuda', default = True, type = str2bool,
+                        help = 'enable cuda')
+    parser.add_argument('--seed', default = 2555, type = int,
+                        help='random seed (defalut 2555')
+    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+                        help='how many batches to wait before logging training status')
     parser.add_argument('--mode', default = 'train', type=str, help = 'train or test')
     
     args = parser.parse_args()
@@ -161,9 +163,12 @@ def main():
             train(args, model, device, train_loader, optimizer, epoch)
             test(args, model, device, valid_loader, outfile = False) # validation 
 
-        test(args, model, device, train_loader, outfile = True, outmode = 'train') # training accuracy
-        test(args, model, device, valid_loader, outfile = True, outmode = 'valid') # validation accuracy
-        test(args, model, device, valid_loader, outfile = True, outmode = 'test') # test accuracy
+        test(args, model, device, train_loader,
+             outfile = True, outmode = 'train') # training accuracy
+        test(args, model, device, valid_loader,
+             outfile = True, outmode = 'valid') # validation accuracy
+        test(args, model, device, valid_loader,
+             outfile = True, outmode = 'test') # test accuracy
         
         model_name = Path(file_path).joinpath(model_name)
         torch.save(model.state_dict(), model_name)

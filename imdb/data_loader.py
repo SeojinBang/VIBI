@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 12 02:14:01 2018
-
-@author: seojinb
-"""
 import os
 import glob
 import io
@@ -16,8 +11,8 @@ import tarfile
 import numpy as np
 from torchtext import data
 from nltk import tokenize
-from keras.preprocessing.text import text_to_word_sequence #Tokenizer, 
-#%%
+from keras.preprocessing.text import text_to_word_sequence
+
 class IMDB_modified(data.Dataset):
 
     urls = ['http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz']
@@ -28,7 +23,10 @@ class IMDB_modified(data.Dataset):
     def sort_key(ex):
         return len(ex.text)
 
-    def __init__(self, path, text_field, label_field, label_pred_field, fname_field, model_name, root_path, load_pred = False, **kwargs):
+    def __init__(self, path,
+                 text_field, label_field, label_pred_field,
+                 fname_field, model_name,
+                 root_path, load_pred = False, **kwargs):
         """Create an IMDB dataset instance given a path and fields.
         Arguments:
             path: Path to the dataset's highest level directory
@@ -37,7 +35,10 @@ class IMDB_modified(data.Dataset):
             Remaining keyword arguments: Passed to the constructor of
                 data.Dataset.
         """
-        fields = [('text', text_field), ('label', label_field), ('label_pred', label_pred_field), ('fname', fname_field)]
+        fields = [('text', text_field),
+                  ('label', label_field),
+                  ('label_pred', label_pred_field),
+                  ('fname', fname_field)]
         examples = []
 
         ## load predicted label
@@ -64,12 +65,15 @@ class IMDB_modified(data.Dataset):
                 with io.open(fname, 'r', encoding = "utf-8") as f:
                     text = f.readline()
                     label_pred = [99] if model_name is None else [label_pred_dict[fname_sub]]
-                examples.append(data.Example.fromlist([text, label, label_pred, [fname_sub]], fields))
+                examples.append(data.Example.fromlist([text, label, label_pred, [fname_sub]],
+                                                      fields))
 
         super(IMDB_modified, self).__init__(examples, fields, **kwargs)     
     
     @classmethod
-    def splits(cls, text_field, label_field, label_pred_field, fname_field, root ='.data',
+    def splits(cls,
+               text_field, label_field, label_pred_field,
+               fname_field, root ='.data',
                train='train', test='test', validation = 'valid', **kwargs):
         """Create dataset objects for splits of the IMDB dataset.
         Arguments:
@@ -84,8 +88,10 @@ class IMDB_modified(data.Dataset):
         #print('imdb-modified-splits')
 
         return super(IMDB_modified, cls).splits(root = root, text_field = text_field, 
-                    label_field = label_field, label_pred_field = label_pred_field, fname_field = fname_field, 
-                    train=train, validation=validation, test=test, root_path = root, **kwargs)
+                    label_field = label_field, label_pred_field = label_pred_field,
+                    fname_field = fname_field, 
+                    train=train, validation=validation, test=test,
+                    root_path = root, **kwargs)
 
     @classmethod
     def iters(cls, batch_size = 32, device = -1, root = '.data', vectors = None, **kwargs):
@@ -105,7 +111,8 @@ class IMDB_modified(data.Dataset):
         LABEL_PRED = data.Field(sequential = False)
         FNAME = data.Field(sequential = False)
         
-        train, test, valid = cls.splits(TEXT, LABEL, LABEL_PRED, FNAME, root=root, **kwargs)
+        train, test, valid = cls.splits(TEXT, LABEL, LABEL_PRED, FNAME,
+                                        root=root, **kwargs)
         
         TEXT.build_vocab(train, vectors = vectors)
         LABEL.build_vocab(train)

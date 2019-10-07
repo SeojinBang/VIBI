@@ -57,18 +57,6 @@ class Explainer(nn.Module):
                 Flatten(),
                 nn.LogSoftmax(1)
                 )
-
-#        self.encode_cnn4_ver2 = nn.Sequential(
-#                nn.Conv2d(1, 8, kernel_size = (5, 5), padding = 2),
-#                nn.ReLU(True),
-#                nn.MaxPool2d(kernel_size = (2, 2)),
-#                nn.Conv2d(8, 1, kernel_size = (5, 5), padding = 2),
-#                nn.ReLU(True),
-#                nn.MaxPool2d(kernel_size = (2, 2)),
-#                #nn.Conv2d(16, 1, kernel_size = (1, 1)),
-#                Flatten(),
-#                nn.LogSoftmax(1)
-#                )#remove this
         
         self.decode_cnn = nn.Sequential(
                  nn.Conv2d(1, 32, kernel_size = (5, 5), padding = 2),
@@ -127,11 +115,6 @@ class Explainer(nn.Module):
             self.encode = self.encode_cnn4
             self.decode = self.decode_cnn
 
-#        elif self.model_type == 'cnn4_ver2':
-#
-#            self.encode = self.encode_cnn4_ver2
-#            self.decode = self.decode_cnn
-#
         elif self.model_type == 'cnn2':
 
             self.encode = self.encode_cnn2
@@ -151,18 +134,21 @@ class Explainer(nn.Module):
         
         assert num_sample > 0
 
-        Z_hat0 = Z_hat.view(Z_hat.size(0), Z_hat.size(1), int(np.sqrt(Z_hat.size(-1))), int(np.sqrt(Z_hat.size(-1))))
+        Z_hat0 = Z_hat.view(Z_hat.size(0), Z_hat.size(1),
+                            int(np.sqrt(Z_hat.size(-1))),
+                            int(np.sqrt(Z_hat.size(-1))))
 
         ## Upsampling
         if self.chunk_size > 1: 
 
-            Z_hat0 = F.interpolate(Z_hat0, scale_factor = (self.chunk_size, self.chunk_size), mode = 'nearest')
-            #Z_hat0 = nn.UpsamplingNearest2d(scale_factor = (self.chunk_size, self.chunk_size))(Z_hat0)
+            Z_hat0 = F.interpolate(Z_hat0,
+                                   scale_factor = (self.chunk_size, self.chunk_size),
+                                   mode = 'nearest')
 
         ## feature selection
         newsize = [x.size(0), num_sample]
         newsize.extend(list(map(lambda x: x, x.size()[2:])))
-        net = torch.mul(x.expand(torch.Size(newsize)), Z_hat0) #torch.Size([batch_size, num_sample, d])
+        net = torch.mul(x.expand(torch.Size(newsize)), Z_hat0) # torch.Size([batch_size, num_sample, d])
         
         ## decode
         newsize2 = [-1, 1]
@@ -170,15 +156,11 @@ class Explainer(nn.Module):
         net = net.view(torch.Size(newsize2)) 
         pred = self.decode(net)
         pred = pred.view(-1, num_sample, pred.size(-1))
-        pred = pred.mean(1) # shoudl be [10, n, 2]#?check whether it has differnet value...
+        pred = pred.mean(1)
         
         return pred
     
     def reparameterize(self, p_i, tau, k, num_sample = 1):
-        '''
-        2018 (c) Seojin Bang
-        Sampled from Gumbel-softmax distribution. Reference: L2X
-        '''
 
         ## sampling
         p_i_ = p_i.view(p_i.size(0), 1, 1, -1)
@@ -197,7 +179,9 @@ class Explainer(nn.Module):
     def forward(self, x, num_sample = 1):
 
         p_i = self.encoder(x) # probability of each element to be selected [barch-size, d]
-        Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau, k = self.K, num_sample = num_sample) # torch.Size([batch-size, num-samples for multishot prediction, d]), d-dimentional random vector to approximate k-hot random explainer Z during training.
+        Z_hat, Z_hat_fixed = self.reparameterize(p_i, tau = self.tau,
+                                                 k = self.K,
+                                                 num_sample = num_sample) # torch.Size([batch-size, num-samples, d])
         logit = self.decoder(x, Z_hat, num_sample)
         logit_fixed = self.decoder(x, Z_hat_fixed)
 
@@ -208,10 +192,7 @@ class Explainer(nn.Module):
             xavier_init(self._modules[m])
 
 def prior(var_size):
-    '''
-    2018 (c) Seojin Bang
-    prior distribution as Gumbel-softmax distribution.
-    '''
+
     p = torch.ones(var_size[1])/ var_size[1]
     p = p.view(1, var_size[1])
     p_prior = p.expand(var_size) # [batch-size, k, feature dim]
