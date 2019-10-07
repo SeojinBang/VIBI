@@ -2,12 +2,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#import torch.nn.init as init
-#from torch.autograd import Variable
 from torch.distributions.relaxed_categorical import RelaxedOneHotCategorical
 from torch.distributions.one_hot_categorical import OneHotCategorical
 from utils import Flatten, idxtobool, cuda
-#%%
+
 class Explainer(nn.Module):
 
     def __init__(self, **kwargs):

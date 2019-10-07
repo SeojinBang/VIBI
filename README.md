@@ -33,7 +33,7 @@ python main.py --dataset mnist --epoch 40 --beta 0.1 --K 4 --explainer_type cnn4
 [L2X Repo](https://github.com/Jianbo-Lab/L2X): keras implementation of L2X.
 
 ## References
-Bang et al. 2019. **Explaining a black-box using Deep Variational Information Bottleneck Approach.** *ArXiv Preprint* [arXiv:1902.06918v1](https://arxiv.org/abs/1902.06918).
+Bang et al. 2019. **Explaining a black-box using Deep Variational Information Bottleneck Approach.** *ArXiv Preprint* [arXiv:1902.06918](https://arxiv.org/abs/1902.06918).
 
 ## Contact
 Please feel free to contact me by e-mail `seojinb at cs dot cmu dot edu`, if you have any questions.
