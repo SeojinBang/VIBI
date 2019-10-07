@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Dec 18 11:01:33 2018
-
-@author: seojin.bang
-"""
 import argparse
 import numpy as np
 import re
